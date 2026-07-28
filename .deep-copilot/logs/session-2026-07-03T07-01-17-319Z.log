@@ -1,0 +1,6 @@
+[2026-07-03T07:01:17.319Z] [INIT] Deep Copilot debug log started. file=d:\workspace002\Seekfree_TC264_DualCam_Opensource_Library\.deep-copilot\logs\session-2026-07-03T07-01-17-319Z.log
+[2026-07-03T07:01:17.319Z] [ACTIVATE] {"version":"0.43.1"}
+[2026-07-03T07:01:17.321Z] [PROVIDERS_LOADED] {"count":4,"ids":["anthropic","custom","deepseek","openai"]}
+[2026-07-03T07:01:17.321Z] [TERMINAL_MONITOR_STARTED] {}
+[2026-07-03T07:01:17.321Z] [STATUSBAR_REGISTERED] {"id":"deepseekAgent.statusBar"}
+[2026-07-03T07:01:17.323Z] [INLINE_COMPLETION_REGISTERED]

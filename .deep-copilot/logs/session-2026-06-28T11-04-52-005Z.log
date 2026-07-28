@@ -1,0 +1,1259 @@
+[2026-06-28T11:04:52.005Z] [INIT] Deep Copilot debug log started. file=d:\workspace002\Seekfree_TC264_DualCam_Opensource_Library\.deep-copilot\logs\session-2026-06-28T11-04-52-005Z.log
+[2026-06-28T11:04:52.005Z] [ACTIVATE] {"version":"0.43.1"}
+[2026-06-28T11:04:52.005Z] [PROVIDERS_LOADED] {"count":4,"ids":["anthropic","custom","deepseek","openai"]}
+[2026-06-28T11:04:52.006Z] [TERMINAL_MONITOR_STARTED] {}
+[2026-06-28T11:04:52.006Z] [STATUSBAR_REGISTERED] {"id":"deepseekAgent.statusBar"}
+[2026-06-28T11:04:52.007Z] [INLINE_COMPLETION_REGISTERED]
+[2026-06-28T11:05:40.564Z] [USER_SEND] {"sid":"s_mqxo8ltl_f618","len":61,"model":"deepseek-v4-pro","baseUrl":"","mode":"manual","text":"位置PD拐直角弯难度太大，换成使用float calculate_deviation(int x1,int y1)这个函数"}
+[2026-06-28T11:05:40.566Z] [INTERACTION_MODE] {"mode":"agent"}
+[2026-06-28T11:05:40.566Z] [TIKTOKEN_UNAVAILABLE] {"reason":"Cannot find module 'js-tiktoken'\nRequire stack:\n- c:\\Users\\hp\\.vscode\\extensions\\zhouchaunge.deep-copilot-0.43.1\\out\\extension.js\n- d:\\Microsoft VS Code32\\7e7950df89\\resources\\app\\out\\vs\\workbench\\api\\node\\extensionHostProcess.js"}
+[2026-06-28T11:05:40.567Z] [ITER_START] {"sid":"s_mqxo8ltl_f618","iter":1,"msg_count":24,"est_tokens":24124}
+[2026-06-28T11:05:40.568Z] [HTTP_REQUEST] {"url":"https://api.deepseek.com","model":"deepseek-v4-pro","msg_count":24}
+[2026-06-28T11:05:42.186Z] [THINK]
+The user is saying that position PD is too difficult for sharp
+[/THINK]
+[2026-06-28T11:05:42.610Z] [THINK]
+ right-angle turns, and wants to use the `calculate_deviation` function instead. Let me understand what this function does and how it would fit into the state machine approach.
+
+Let me re-read the `calculate_deviation`
+[/THINK]
+[2026-06-28T11:05:43.018Z] [THINK]
+ function and `judge_where()` more carefully.
+
+From `image.c`:
+
+```c
+float calculate_deviation(int x1,int y1)
+{
+    int x2 = mid_line[MT9V
+[/THINK]
+[2026-06-28T11:05:43.441Z] [THINK]
+03X_1_H - 1];    // 底部中线的x坐标
+    int y2 = 0;                            // y2-y1 实际上不用
+[/THINK]
+[2026-06-28T11:05:43.868Z] [THINK]
+
+    // 图像中心线
+    float mid_x = (float)MT9V03X_1_W / 2.0f;   // 94.0
+    // 参考 y 坐标（图像中间行
+[/THINK]
+[2026-06-28T11:05:44.270Z] [THINK]
+）
+    int y_ref = MT9V03X_1_H / 2;               // 60
+    // 计算直线在 y_ref 处的 x 坐标
+    //    (x-x1)/(x2-x1) = (y-y1)/(y2
+[/THINK]
+[2026-06-28T11:05:44.682Z] [THINK]
+-y1)
+    float x_line = (float)x1 + (float)(x2 - x1) * (float)(y_ref - y1) / (float)(y2 - y1);
+    // 偏差 = 直线x - 中心
+[/THINK]
+[2026-06-28T11:05:45.128Z] [THINK]
+x
+    float deviation = x_line - mid_x;
+    return deviation;   
+}
+```
+
+This function takes a point (x1, y1) - which would be a detected feature
+[/THINK]
+[2026-06-28T11:05:45.557Z] [THINK]
+ point (like a corner of a turn), and the bottom midline point (x2 = `mid_line[MT9
+[/THINK]
+[2026-06-28T11:05:46.029Z] [THINK]
+V03X_1_H - 1]`), and calculates where the line connecting these two points intersects the middle row of the image, then returns the deviation from the image
+[/THINK]
+[2026-06-28T11:05:46.450Z] [THINK]
+ center.
+
+The idea is: when a turn is detected, instead of using fixed-speed open-loop turning, use the detected turn feature
+[/THINK]
+[2026-06-28T11:05:46.903Z] [THINK]
+ point to calculate a "virtual centerline" deviation, and feed that into the PD controller.
+
+Let
+[/THINK]
+[2026-06-28T11:05:47.322Z] [THINK]
+ me look at how `judge_where()` and the `zuobiao` arrays work:
+
+In `judge_num_where()`:
+- `left.zuobiao[0][0]` = h (
+[/THINK]
+[2026-06-28T11:05:47.764Z] [THINK]
+row), `left.zuobiao[0][1]` = l (column) for the first detected transition point in the left region
+- `right.zuobiao[0][0
+[/THINK]
+[2026-06-28T11:05:48.174Z] [THINK]
+]` = h, `right.zuobiao[0][1]` = l for the right region
+
+The commented-out code in `judge_where()` shows the original intent:
+```c
+if(up.road[
+[/THINK]
+[2026-06-28T11:05:48.590Z] [THINK]
+0]>0&&left.road[0]>=1&&right.road[0]==0)
+{
+    /*if(left.zuobiao[0][0]-left.zuobiao[1][0]<=2||left.zuobiao[0][
+[/THINK]
+[2026-06-28T11:05:49.027Z] [THINK]
+0]-left.zuobiao[2][0]<=2)
+    {
+        if(my_abs(left.zuobiao[0][2] - left.zuobiao[0][0]) >= 5)
+        {
+            weighted_error = calculate_deviation(left.zuobiao[0][1],left.zuobiao[
+[/THINK]
+[2026-06-28T11:05:49.448Z] [THINK]
+0][0]);
+            return 3;//左转
+        }
+    }*/
+   return 3;//左转
+}
+```
+
+So the original design was: when a left turn is detected, use `calculate_deviation(left.
+[/THINK]
+[2026-06-28T11:05:49.862Z] [THINK]
+zuobiao[0][1], left.zuobiao[0][0])` to compute the deviation, store it in `weighted_error`, and then this value would be used somewhere
+[/THINK]
+[2026-06-28T11:05:50.319Z] [THINK]
+ to guide the turn.
+
+Now the user wants to:
+1. Keep the state machine for detecting turns
+2. But instead of using fixed speeds (70
+[/THINK]
+[2026-06-28T11:05:50.736Z] [THINK]
+/90) during the turn, use `calculate_deviation()` to compute a "virtual deviation" based on the detected turn feature point
+3. Feed this deviation into the normal PD controller
+[/THINK]
+[2026-06-28T11:05:51.448Z] [THINK]
+
+
+This way, even during a turn, the PD controller is still running, but instead of using `Deviation()` (which is based on the midline), it uses the turn-feature-based deviation. This is essentially a different error signal
+[/THINK]
+[2026-06-28T11:05:51.886Z] [THINK]
+ during turns.
+
+Let me now design the modification:
+
+### `connect.c` changes:
+
+1. In `judge_where()`, un
+[/THINK]
+[2026-06-28T11:05:52.304Z] [THINK]
+comment and fix the `calculate_deviation` logic, and save the computed deviation to `weighted_error`
+2. Add a function or
+[/THINK]
+[2026-06-28T11:05:52.761Z] [THINK]
+ mechanism to retrieve this `weighted_error` 
+3. In `state_machine()`, during turn states, instead of setting fixed speeds, set a flag
+[/THINK]
+[2026-06-28T11:05:53.277Z] [THINK]
+ so `line_control()` uses `weighted_error` instead of `Deviation()`
+
+### `motor.c` changes:
+
+1. In `line_control()`, check if we're in a turn state and use the appropriate error source
+[/THINK]
+[2026-06-28T11:05:53.715Z] [THINK]
+
+
+Actually, let me think about this more carefully. The user said "不动代码展示给我" — they want me to SHOW the changes without actually modifying the files
+[/THINK]
+[2026-06-28T11:05:54.151Z] [THINK]
+.
+
+Let me think about the cleanest approach:
+
+**Approach**: 
+- `state_machine()` returns 0 always (never blocks PD)
+- During turns
+[/THINK]
+[2026-06-28T11:05:54.573Z] [THINK]
+, `state_machine()` sets `weighted_error` (which is a global in image.c, already declared)
+- `line_control()` checks the state
+[/THINK]
+[2026-06-28T11:05:54.990Z] [THINK]
+ and uses either `Deviation()` or `weighted_error` as the error input to PD
+- The PD controller always runs, just with a different
+[/THINK]
+[2026-06-28T11:05:55.427Z] [THINK]
+ error source during turns
+
+Let me look at what globals are available:
+- `weighted_error` is defined in `image.c` (line ~415 area
+[/THINK]
+[2026-06-28T11:05:55.856Z] [THINK]
+)
+- It needs to be `extern` in `image.h` or in the using file
+
+Let me check `image.h`:
+```c
+#ifndef
+[/THINK]
+[2026-06-28T11:05:56.277Z] [THINK]
+ CODE_IMAGE_H_
+#define CODE_IMAGE_H_
+
+#include "zf_common_headfile.h"
+extern int threhold;
+
+uint8 Otsu(uint8 imageindex[MT9V03X_1_H][MT9V03X_1_W
+[/THINK]
+[2026-06-28T11:05:56.715Z] [THINK]
+]);
+void BinaryZation(uint8 value);
+void image_invocation();
+void ips114_screen();
+void ips114_show_line();
+float Deviation();
+#endif /* CODE_IMAGE_H_ */
+```
+
+`weighted_error` is not declared extern in image
+[/THINK]
+[2026-06-28T11:05:57.153Z] [THINK]
+.h, but `motor.c` already includes `image.h`. So we need to add `extern float
+[/THINK]
+[2026-06-28T11:05:57.631Z] [THINK]
+ weighted_error;` somewhere accessible.
+
+Let me also look at what `judge_where()` needs to be modified to. The user wants `calculate_deviation` to be called with the detected turn feature
+[/THINK]
+[2026-06-28T11:05:58.039Z] [THINK]
+ coordinates. The existing commented code already shows the intent.
+
+Let me now write up the modification plan clearly.
+
+The key changes are
+[/THINK]
+[2026-06-28T11:05:58.471Z] [THINK]
+:
+
+### image.c / image.h:
+1. `judge_where()` should compute `weighted_error` using `calculate_deviation()` when a turn is detected
+2.
+[/THINK]
+[2026-06-28T11:05:58.977Z] [THINK]
+ Export `weighted_error` via `image.h`
+3. Export `judge_where()` return value AND the computed deviation
+
+### connect.c:
+1. `state_machine()` no longer sets
+[/THINK]
+[2026-06-28T11:05:59.390Z] [THINK]
+ fixed speeds
+2. Instead, during turns, it sets a turn direction flag
+3. Always returns 0 so PD runs
+
+### motor.c:
+1.
+[/THINK]
+[2026-06-28T11:05:59.822Z] [THINK]
+ `line_control()` uses either `Deviation()` (straight) or the turn-based deviation (during turns)
+2. PD parameters
+[/THINK]
+[2026-06-28T11:06:00.278Z] [THINK]
+ can be adjusted during turns for more aggressive steering
+
+Let me write this up clearly. The user said "不动代码展示给我" so I should show the full
+[/THINK]
+[2026-06-28T11:06:00.690Z] [THINK]
+ modified code for each file.
+
+Actually wait, re-reading: "怎么改呢，不动代码展示给我" — the user is asking "how to modify it, don't touch
+[/THINK]
+[2026-06-28T11:06:01.124Z] [THINK]
+ the code, just show me". So they want me to present the solution without actually editing files.
+
+Let me present the full solution with code blocks showing before
+[/THINK]
+[2026-06-28T11:06:01.544Z] [THINK]
+/after for each file.
+
+Let me think about the cleanest implementation:
+
+1. **In `image.c`**: Uncomment and fix `judge_where()` to properly compute `weight
+[/THINK]
+[2026-06-28T11:06:01.972Z] [THINK]
+ed_error` using `calculate_deviation()`. Currently the relevant code is all commented out - just `return 3` and `return 4` without computing the error.
+
+2. **In `
+[/THINK]
+[2026-06-28T11:06:02.390Z] [THINK]
+connect.c`**: 
+   - `state_machine()` changes to use the computed `weighted_error` 
+   - During
+[/THINK]
+[2026-06-28T11:06:02.823Z] [THINK]
+ turns, instead of fixed
+[/THINK]
+[2026-06-28T11:06:03.427Z] [THINK]
+ speeds, the state machine sets `pid_speed_L.target` and `pid_speed_R.target` using the PD formula but with `weighted_error` as input
+   - Or better: set a flag/global that
+[/THINK]
+[2026-06-28T11:06:04.073Z] [THINK]
+ `line_control()` reads
+
+3. **In `motor.c`**:
+   - `line_control()` checks the current state and uses the appropriate error source
+
+Actually, the cleanest approach is:
+
+-
+[/THINK]
+[2026-06-28T11:06:04.481Z] [THINK]
+ `judge_where()` computes `weighted_error` and returns turn type
+- `state_machine()` manages state transitions
+- `line_control()` in motor.c always runs PD, but uses different error sources:
+  - Normal: `Deviation()` 
+  - Left turn: `weighted_error` (which was computed
+[/THINK]
+[2026-06-28T11:06:04.906Z] [THINK]
+ from left feature point)
+  - Right turn: `weighted_error` (which was computed from right feature point)
+
+And `weighted_error` gets used as the `line_error` input
+[/THINK]
+[2026-06-28T11:06:05.356Z] [THINK]
+ to the PD controller.
+
+This way the PD controller is always in the loop, always providing closed-loop control, just with
+[/THINK]
+[2026-06-28T11:06:05.770Z] [THINK]
+ a different reference/error signal during turns.
+
+Let me now present this. I should also think about edge cases:
+- What if `judge_where
+[/THINK]
+[2026-06-28T11:06:06.206Z] [THINK]
+` returns 0 (straight) but state is still in turn? The state machine handles this with the exit
+[/THINK]
+[2026-06-28T11:06:06.634Z] [THINK]
+ conditions.
+- What about the `line_error_last` issue? This is still there since `weighted_error` from different frames might have
+[/THINK]
+[2026-06-28T11:06:07.060Z] [THINK]
+ different semantics. But since PD is always running, `line_error_last` gets updated every cycle.
+
+Actually, `line_error_last` is only
+[/THINK]
+[2026-06-28T11:06:07.514Z] [THINK]
+ updated inside `line_control()` when the error is outside the deadband. So there's still a potential issue if we switch error sources.
+[/THINK]
+[2026-06-28T11:06:07.919Z] [THINK]
+ But the PD's D term uses `(line_error - line_error_last)` which represents the rate of change — if we're
+[/THINK]
+[2026-06-28T11:06:08.331Z] [THINK]
+ switching from `Deviation()` to `weighted_error` mid-turn, the first D term might be off. But since the state transition
+[/THINK]
+[2026-06-28T11:06:08.754Z] [THINK]
+ happens at the moment a turn is detected, and `weighted_error` is computed from the same frame, the values should be reasonably close.
+
+OK let me write this up now
+[/THINK]
+[2026-06-28T11:06:09.246Z] [THINK]
+. I'll present the full solution.
+
+Actually, let me reconsider the architecture. The simplest change that addresses the user's request is:
+
+**In
+[/THINK]
+[2026-06-28T11:06:09.733Z] [THINK]
+ `judge_where()`**: uncomment the code and have it compute `weighted_error` from the turn feature.
+
+**In `state_machine()`**: during turns, compute a "virtual"
+[/THINK]
+[2026-06-28T11:06:10.148Z] [THINK]
+ deviation and set the speed targets using a scaled version of `weighted_error`, similar to how `
+[/THINK]
+[2026-06-28T11:06:10.586Z] [THINK]
+line_control()` does it. But keep the PD running.
+
+Wait, but if `state_machine()` returns 0 and `line_control()` runs, then `line_control()` will
+[/THINK]
+[2026-06-28T11:06:10.998Z] [THINK]
+ use `Deviation()` which is based on `mid_line[]`. During a sharp turn, the midline might be unreliable. 
+
+So the cleanest approach is
+[/THINK]
+[2026-06-28T11:06:11.414Z] [THINK]
+:
+
+1. `judge_where()` computes `weighted_error` and stores it globally
+2. `state_machine()` manages transitions, always returns 0
+3. `line_control()` checks if
+[/THINK]
+[2026-06-28T11:06:11.839Z] [THINK]
+ we're in a turn state, and if so, uses `weighted_error` instead of `Deviation()`
+
+Let me present this.
+
+For `line_control()`:
+```c
+void line_control(void)
+{
+    state
+[/THINK]
+[2026-06-28T11:06:12.258Z] [THINK]
+_machine();  // 只管理状态切换，不返回值
+
+    float base_speed = 70.0f;
+    float line_error;
+    
+    // 根据状态选择误差来源
+    if(Go == turn_left
+[/THINK]
+[2026-06-28T11:06:12.686Z] [THINK]
+_state || Go == turn_right_state)
+    {
+        line_error = weighted_error;  // 用弯道特征点计算的偏差
+        // 弯道时放大PD
+[/THINK]
+[2026-06-28T11:06:13.117Z] [THINK]
+参数
+        line_pid.Kp = 2.5f;
+        line_pid.Kd = 2.0f;
+        line_pid.output_limit = 80.0f;
+    }
+    else
+    {
+        line_error = Deviation();  // 正常
+[/THINK]
+[2026-06-28T11:06:13.543Z] [THINK]
+循线偏差
+        line_pid.Kp = 1.0f;
+        line_pid.Kd = 1.0f;
+        line_pid.output_limit = 30.0f;
+    }
+    
+    // ... rest
+[/THINK]
+[2026-06-28T11:06:13.969Z] [THINK]
+ of PD control using line_error ...
+}
+```
+
+But `Go` is defined in `connect.c` and would need to be externed. Or we can add a
+[/THINK]
+[2026-06-28T11:06:14.389Z] [THINK]
+ helper function. Let me use a function like `is_in_turn()`.
+
+Actually, let me look at the existing code more carefully. `Go` is defined as
+[/THINK]
+[2026-06-28T11:06:14.818Z] [THINK]
+:
+```c
+driver_state Go = follow_state;
+```
+in `connect.c`. It's not externed anywhere. The `motor.h` has `extern`
+[/THINK]
+[2026-06-28T11:06:15.265Z] [THINK]
+ for motor-related things but not for `Go`.
+
+To keep it clean, I can either:
+1. Add `extern driver_state Go;` to connect
+[/THINK]
+[2026-06-28T11:06:15.681Z] [THINK]
+.h or motor.h
+2. Add a getter function like `uint8 is_turning(void)` in connect.c
+[/THINK]
+[2026-06-28T11:06:16.102Z] [THINK]
+
+
+I think option 2 is cleaner — add a simple function that tells whether we're in a turn.
+
+Let me write this up properly now.
+[/THINK]
+[2026-06-28T11:06:37.249Z] [STREAM_DONE] {"elapsed_ms":56681,"ttfb_ms":737,"chunks":5102,"tool_calls":0}
+[2026-06-28T11:06:37.250Z] [ITER_END] {"sid":"s_mqxo8ltl_f618","iter":1,"elapsed_ms":56683,"assistant_chars":6642,"reasoning_chars":10519,"tool_calls":0,"usage":{"prompt_tokens":41261,"completion_tokens":5105,"total_tokens":46366,"prompt_tokens_details":{"cached_tokens":39936},"completion_tokens_details":{"reasoning_tokens":2862},"prompt_cache_hit_tokens":39936,"prompt_cache_miss_tokens":1325}}
+[2026-06-28T11:06:37.250Z] [ASSISTANT] 好的，不动你的代码。下面展示如何用 `calculate_deviation` 这个函数来替代固定差速开环转弯。
+
+---
+
+## 方案思路
+
+现在 `judge_where()` 里原本的代码被注释掉了：
+
+```c
+// image.c 中 judge_where() 目前的样子
+int judge_where()
+{
+    if(up.road[0]>0&&left.road[0]>=1&&right.road[0]==0)
+    {
+       /*if(left.zuobiao[0][0]-left.zuobiao[1][0]<=2||...)  // ← 全被注释了
+       {
+           ...
+           weighted_error = calculate_deviation(left.zuobiao[0][1],left.zuobiao[0][0]);
+           return 3;
+       }*/
+       return 3;   // ← 直接返回，weighted_error 没被赋值！
+    }
+    // ...
+}
+```
+
+`calculate_deviation(x1, y1)` 的作用是：**用检测到的弯道特征点 + 底部中线端点，连一条线，算这条线偏离图像中心的距离**。它本质上是给弯道场景算一个"虚拟中线偏差"。
+
+我们要做的就是：**把这个偏差喂给 PD 控制器**，让 PD 在弯道期间用这个虚拟偏差来转向，而不是用固定差速盲转。
+
+---
+
+## 需要改的三个文件
+
+### 一、`image.h` — 加两行声明
+
+```c
+// image.h 末尾，#endif 之前加上：
+
+extern float weighted_error;      // ★ 新增：弯道虚拟偏差
+int judge_where(void);            // ★ 新增：声明 jud_where
+```
+
+---
+
+### 二、`image.c` 的 `judge_where()` — 恢复被注释的逻辑
+
+**改前：**
+```c
+int judge_where()
+{
+    if(up.road[0]>0&&left.road[0]>=1&&right.road[0]==0)
+    {
+        /*if(left.zuobiao[0][0]-left.zuobiao[1][0]<=2||left.zuobiao[0][0]-left.zuobiao[2][0]<=2)
+        {
+            if(my_abs(left.zuobiao[0][2] - left.zuobiao[0][0]) >= 5)
+            {
+                weighted_error = calculate_deviation(left.zuobiao[0][1],left.zuobiao[0][0]);
+                return 3;
+
+            }
+
+        }*/
+       return 3;
+    }
+    if(up.road[0]>0&&left.road[0]==0&&right.road[0]>=1)
+    {
+        /*if(right.zuobiao[0][0]-right.zuobiao[1][0]<=2||right.zuobiao[0][0]-right.zuobiao[2][0]<=2)
+        {
+            if(my_abs(right.zuobiao[0][2] - right.zuobiao[0][0]) >= 5)
+            {
+                weighted_error = calculate_deviation(right.zuobiao[0][1],right.zuobiao[0][0]);
+                
+            }
+
+        }*/
+       return 4;
+    }
+    return 0;
+}
+```
+
+**改后：**
+```c
+int judge_where()
+{
+    if(up.road[0] > 0 && left.road[0] >= 1 && right.road[0] == 0)
+    {
+        // ★ 用左区域第一个特征点坐标计算虚拟偏差
+        weighted_error = calculate_deviation(left.zuobiao[0][1], left.zuobiao[0][0]);
+        return 3;
+    }
+    if(up.road[0] > 0 && left.road[0] == 0 && right.road[0] >= 1)
+    {
+        // ★ 用右区域第一个特征点坐标计算虚拟偏差
+        weighted_error = calculate_deviation(right.zuobiao[0][1], right.zuobiao[0][0]);
+        return 4;
+    }
+    return 0;
+}
+```
+
+> 如果担心误检，可以把上面的校验条件（坐标差≥5 等）加回来，但先把主逻辑跑通再说。
+
+---
+
+### 三、`connect.c` 的 `state_machine()` — 彻底重构
+
+核心改动：**不再设固定速度，不再 return 1 阻断 PD，只做状态管理和参数调节。**
+
+```c
+#include "image.h"
+#include "motor.h"
+#include "zf_common_headfile.h"
+
+
+#define BASE_SPEED          70.0f
+
+/* 弯道 PD 参数（比直道更激进） */
+#define TURN_KP             2.5f
+#define TURN_KD             2.0f
+#define TURN_OUTPUT_LIMIT   80.0f
+
+/* 直道 PD 参数（恢复默认） */
+#define STRAIGHT_KP         1.0f
+#define STRAIGHT_KD         1.0f
+#define STRAIGHT_OUTPUT_LIMIT 30.0f
+
+#define TURN_MIN_TICK       20
+#define TURN_MAX_TICK       110
+#define TURN_EXIT_ERROR     6.0f
+
+
+typedef enum
+{
+    follow_state = 0,
+    turn_left_state = 3,
+    turn_right_state = 4,
+    turn_back_state = 5,
+} driver_state;
+
+driver_state Go = follow_state;
+
+static uint16 turn_tick = 0;
+
+/* ★ 给 motor.c 查询当前是否在转弯 */
+uint8 is_in_turn(void)
+{
+    return (Go == turn_left_state || Go == turn_right_state) ? 1 : 0;
+}
+
+void state_machine(void)
+{
+    int order = judge_where();
+    float error = Deviation();
+
+    switch(Go)
+    {
+        case follow_state:
+        {
+            turn_tick = 0;
+
+            /* 直道：用保守的 PD 参数 */
+            line_pid.Kp           = STRAIGHT_KP;
+            line_pid.Kd           = STRAIGHT_KD;
+            line_pid.output_limit = STRAIGHT_OUTPUT_LIMIT;
+
+            if(order == 3)
+            {
+                Go = turn_left_state;
+            }
+            else if(order == 4)
+            {
+                Go = turn_right_state;
+            }
+
+            break;   // ★ 不 return，让 line_control 继续跑 PD
+        }
+
+        case turn_left_state:
+        case turn_right_state:
+        {
+            turn_tick++;
+
+            /* 弯道：用激进的 PD 参数，PD 会自己根据 weighted_error 转向 */
+  
+[2026-06-28T11:06:37.250Z] [CACHE_HIT_RATE] {"sid":"s_mqxo8ltl_f618","iter":1,"hit":39936,"miss":1325,"rate":0.9679}
+[2026-06-28T11:06:37.250Z] [SEND_END] {"sid":"s_mqxo8ltl_f618","iters":0,"asst_chars":6642}
+[2026-06-28T11:18:45.359Z] [USER_SEND] {"sid":"s_mqxo8ltl_f618","len":34,"model":"deepseek-v4-pro","baseUrl":"","mode":"manual","text":"weighted_error 用这个计算轮子需要加多少速度才能转过去"}
+[2026-06-28T11:18:45.360Z] [INTERACTION_MODE] {"mode":"agent"}
+[2026-06-28T11:18:45.360Z] [ITER_START] {"sid":"s_mqxo8ltl_f618","iter":1,"msg_count":26,"est_tokens":28806}
+[2026-06-28T11:18:45.361Z] [HTTP_REQUEST] {"url":"https://api.deepseek.com","model":"deepseek-v4-pro","msg_count":26}
+[2026-06-28T11:18:48.153Z] [THINK]
+The user wants to use `weighted_error` (computed by `calculate_deviation`)
+[/THINK]
+[2026-06-28T11:18:48.594Z] [THINK]
+ to directly compute how much extra speed each wheel needs to make the turn, rather than feeding it through the position PD controller.
+
+Let me re-read the `calculate_deviation`
+[/THINK]
+[2026-06-28T11:18:49.078Z] [THINK]
+ function to understand what it returns:
+
+```c
+float calculate_deviation(int x1,int y1)
+{
+    int x2 = mid_line[MT9V03X_1_H - 1];    // 底部中线x坐标
+    int y2 = 0;                           
+[/THINK]
+[2026-06-28T11:18:49.495Z] [THINK]
+ // y2-y1 实际上不用
+    
+    float mid_x = (float)MT9V03X_1_W / 2.0f;   // 图像中心x
+[/THINK]
+[2026-06-28T11:18:49.908Z] [THINK]
+ = 94.0
+    
+    int y_ref = MT9V03X_1_H / 2;               // 60 参考行
+    
+    // 两点连线在 y_ref 处的 x 坐标
+    float
+[/THINK]
+[2026-06-28T11:18:50.333Z] [THINK]
+ x_line = (float)x1 + (float)(x2 - x1) * (float)(y_ref - y1) / (float)(y2 - y1);
+    
+    // 偏差 = 连线x - 图像中心x
+    float deviation =
+[/THINK]
+[2026-06-28T11:18:50.752Z] [THINK]
+ x_line - mid_x;
+    return deviation;   
+}
+```
+
+Wait, `y2 = 0`! That means `y2 - y1 = -y1`. And the formula becomes:
+
+`x_line = x1 + (x2 - x1
+[/THINK]
+[2026-06-28T11:18:51.197Z] [THINK]
+) * (y_ref - y1) / (-y1)`
+
+This is computing the x-coordinate of the line from (x1, y1) to (x2, 0) at y
+[/THINK]
+[2026-06-28T11:18:51.632Z] [THINK]
+ = y_ref (60).
+
+Actually, this makes sense: it extrapolates from the detected feature point (x1, y1) to the bottom center
+[/THINK]
+[2026-06-28T11:18:52.044Z] [THINK]
+ point (x2, 0) and sees where that line is at the middle of the image.
+
+The `weighted_error` would be positive
+[/THINK]
+[2026-06-28T11:18:52.459Z] [THINK]
+ if the line is to the right of center, negative if to the left.
+
+The user wants to directly compute how much speed to add to each wheel. This is essentially what
+[/THINK]
+[2026-06-28T11:18:52.890Z] [THINK]
+ the PD controller was doing, but the user seems to want a simpler direct mapping.
+
+Let me think about what they want. They're saying: use `weighted_error` to
+[/THINK]
+[2026-06-28T11:18:53.328Z] [THINK]
+ directly determine wheel speed differential, rather than using PD.
+
+The approach would be:
+1. `state_machine()` detects a turn and sets
+[/THINK]
+[2026-06-28T11:18:53.731Z] [THINK]
+ `weighted_error` via `calculate_deviation()`
+2. `line_control()` uses `weighted_error` directly to compute speed differential
+
+The key question
+[/THINK]
+[2026-06-28T11:18:54.140Z] [THINK]
+ is: how to map `weighted_error` to wheel speeds?
+
+Option A: Use it as the PD input (what I suggested before
+[/THINK]
+[2026-06-28T11:18:54.552Z] [THINK]
+)
+Option B: Direct mapping - `turn_out = K * weighted_error` (just P control, no D)
+Option C: Replace PD entirely
+[/THINK]
+[2026-06-28T11:18:54.977Z] [THINK]
+ with a direct speed calculation based on `weighted_error`
+
+I think the user wants something simpler. Let me re-read their message: "weighted_error 
+[/THINK]
+[2026-06-28T11:18:55.384Z] [THINK]
+用这个计算轮子需要加多少速度才能转过去" — they want to use weighted_error to calculate how much speed each wheel needs.
+
+So they want a direct
+[/THINK]
+[2026-06-28T11:18:55.798Z] [THINK]
+ formula like:
+- Left wheel speed = base_speed - K * weighted_error
+- Right wheel speed = base_speed + K * weighted_error
+
+Where K is a tunable gain.
+[/THINK]
+[2026-06-28T11:18:56.228Z] [THINK]
+ This is essentially P-only control, dropping the D term.
+
+But wait, the user might be even more specific. Let me think
+[/THINK]
+[2026-06-28T11:18:56.669Z] [THINK]
+ about what `calculate_deviation` returns — it's the deviation in pixels. They need to convert pixels to speed difference.
+
+Actually
+[/THINK]
+[2026-06-28T11:18:57.080Z] [THINK]
+, re-reading the user's message more carefully: "位置PD拐直角弯难度太大，换成使用float calculate_deviation(int x1,int y1)这个函数" and now "weighted_error 
+[/THINK]
+[2026-06-28T11:18:57.501Z] [THINK]
+用这个计算轮子需要加多少速度才能转过去"
+
+I think they want:
+1. In `judge_where()`, when a turn is detected, compute `weighted_error = calculate_deviation(x1, y1)`
+[/THINK]
+[2026-06-28T11:18:57.914Z] [THINK]
+ 
+2. In the turn state of `state_machine()`, directly use `weighted_error` to set wheel speeds
+
+Let me propose a clean solution where:
+- `jud
+[/THINK]
+[2026-06-28T11:18:58.335Z] [THINK]
+ge_where()` restores the commented code to compute `weighted_error`
+- `state_machine()` in turn states uses `weighted_error` directly to compute wheel speed targets
+- The turn
+[/THINK]
+[2026-06-28T11:18:58.801Z] [THINK]
+ uses: `turn_out = K * weighted_error` (simple proportional control)
+- `line_control()` uses either `Dev
+[/THINK]
+[2026-06-28T11:18:59.263Z] [THINK]
+iation()` or `weighted_error` depending on state
+
+Let me show the modified code.
+
+Actually, I think the user wants something even more direct. They might want:
+
+In
+[/THINK]
+[2026-06-28T11:18:59.729Z] [THINK]
+ the turn state:
+```c
+float turn = K * weighted_error;
+pid_speed_L.target = base_speed - turn;
+pid_speed_R.target = base_speed + turn;
+```
+
+Where `weighted
+[/THINK]
+[2026-06-28T11:19:00.148Z] [THINK]
+_error` represents how far the turn line deviates from center, and K converts it to speed.
+
+Let me craft a clean
+[/THINK]
+[2026-06-28T11:19:00.650Z] [THINK]
+ proposal. The key changes:
+
+### image.c `judge_where()`:
+Restore the commented code to compute `weighted_error`
+
+### connect.c `state_machine()`:
+In turn states, use
+[/THINK]
+[2026-06-28T11:19:01.077Z] [THINK]
+ `weighted_error` with a gain to directly set wheel speeds, instead of fixed 70/90.
+
+### motor.c `line_control()`:
+When in turn
+[/THINK]
+[2026-06-28T11:19:01.490Z] [THINK]
+ state, use `weighted_error` instead of `Deviation()`, and bypass the PD controller for a direct mapping.
+
+Wait, that defeats the purpose
+[/THINK]
+[2026-06-28T11:19:01.919Z] [THINK]
+ of the PD. Let me think again...
+
+Actually, I think the simplest approach the user wants is:
+
+1. Keep PD for straight line following
+[/THINK]
+[2026-06-28T11:19:02.359Z] [THINK]
+
+2. In turns, replace the fixed 70/90 with a formula that uses `weighted_error`
+
+Like:
+```c
+case turn_left_state:
+{
+    turn
+[/THINK]
+[2026-06-28T11:19:02.806Z] [THINK]
+_tick++;
+    
+    // Use weighted_error to compute speed difference
+    float base = 70.0f;
+    float k
+[/THINK]
+[2026-06-28T11:19:03.719Z] [THINK]
+_turn = 2.0f;  // tunable gain
+    float turn = k_turn * fabsf(weighted_error);
+    if(turn > 40.0f) turn = 40.0f;  // limit
+    
+    pid_speed_L.target = base - turn;
+    pid_speed_R.target = base + turn;
+    
+    // exit conditions...
+}
+```
+
+But this is still open-loop in the sense that it doesn't use ongoing camera feedback for
+[/THINK]
+[2026-06-28T11:19:04.156Z] [THINK]
+ the PD...
+
+Hmm, let me reconsider. The user said "weighted_error 用这个计算轮子需要加多少速度才能转过去" - they want to use weighted_error to compute how much
+[/THINK]
+[2026-06-28T11:19:04.573Z] [THINK]
+ speed to add.
+
+I think the cleanest approach is:
+1. `weighted_error` is computed in `judge_where()` when a turn is detected
+2. During the turn
+[/THINK]
+[2026-06-28T11:19:05.006Z] [THINK]
+ state, use `weighted_error * K` to determine the speed differential
+3. This replaces both the fixed 70/90 AND the PD controller during
+[/THINK]
+[2026-06-28T11:19:05.465Z] [THINK]
+ turns
+
+But `weighted_error` is only computed once when the turn is detected (it uses the feature point coordinates from `judge_num_where()`). It doesn't update during
+[/THINK]
+[2026-06-28T11:19:05.897Z] [THINK]
+ the turn. So it would be a constant speed differential throughout the turn.
+
+Wait, that's actually a problem. `weighted_error` is snapshot-based
+[/THINK]
+[2026-06-28T11:19:06.346Z] [THINK]
+. It won't change during the turn unless `judge_where()` is called again and re-computes it.
+
+Looking
+[/THINK]
+[2026-06-28T11:19:06.759Z] [THINK]
+ at the current code flow:
+- `state_machine()` calls `judge_where()` every 10ms
+- `judge_where()` can update `weighted_error` each time
+- But
+[/THINK]
+[2026-06-28T11:19:07.168Z] [THINK]
+ `judge_where()` also returns the state (3, 4, or 0)
+
+So if we're in `turn_left_state`,
+[/THINK]
+[2026-06-28T11:19:07.681Z] [THINK]
+ `judge_where()` might return 3 again (still seeing the turn), and would re-compute `weighted_error` with potentially different feature
+[/THINK]
+[2026-06-28T11:19:08.119Z] [THINK]
+ points. That could work!
+
+But wait, in `state_machine()`, when `Go == turn_left_state`, we don't check `order` again (
+[/THINK]
+[2026-06-28T11:19:08.611Z] [THINK]
+we just increment tick and check exit). So `judge_where()` is called (to re-compute `weighted_error`), but the return value `order` is not used in the turn states.
+
+OK
+[/THINK]
+[2026-06-28T11:19:09.048Z] [THINK]
+ I think the simplest approach is:
+
+**In `state_machine()`, during turn states, compute the speed directly from `weighted_error`:**
+
+```c
+case
+[/THINK]
+[2026-06-28T11:19:09.460Z] [THINK]
+ turn_left_state:
+{
+    turn_tick++;
+    
+    float base = 70.0f;
+    float k_turn = 2.5f;
+    float turn =
+[/THINK]
+[2026-06-28T11:19:09.903Z] [THINK]
+ k_turn * fabsf(weighted_error);
+    if(turn > 50.0f) turn = 50.0f;
+    if(turn < 15.0f) turn = 15.0f;  // minimum turn
+    
+    pid_speed_L.target = base - turn
+[/THINK]
+[2026-06-28T11:19:10.331Z] [THINK]
+;
+    pid_speed_R.target = base + turn;
+    
+    // exit...
+}
+```
+
+And restore the `weighted_error` computation in `judge_where()`.
+
+Let me write this up cleanly.
+[/THINK]
+[2026-06-28T11:19:31.737Z] [STREAM_DONE] {"elapsed_ms":46376,"ttfb_ms":888,"chunks":4121,"tool_calls":0}
+[2026-06-28T11:19:31.737Z] [ITER_END] {"sid":"s_mqxo8ltl_f618","iter":1,"elapsed_ms":46377,"assistant_chars":6085,"reasoning_chars":7026,"tool_calls":0,"usage":{"prompt_tokens":46811,"completion_tokens":4120,"total_tokens":50931,"prompt_tokens_details":{"cached_tokens":41216},"completion_tokens_details":{"reasoning_tokens":1931},"prompt_cache_hit_tokens":41216,"prompt_cache_miss_tokens":5595}}
+[2026-06-28T11:19:31.738Z] [ASSISTANT] 好，不动代码。下面给你一个**直接用 `weighted_error` 算轮速差**的方案，不走位置 PD，逻辑更直接。
+
+---
+
+## 先理解 `calculate_deviation` 算出来的是什么
+
+```c
+float calculate_deviation(int x1, int y1)
+{
+    int x2 = mid_line[MT9V03X_1_H - 1];  // 图像底部中线的 x 坐标
+    int y2 = 0;
+
+    float mid_x = MT9V03X_1_W / 2.0f;    // 图像中心 = 94.0
+    int y_ref = MT9V03X_1_H / 2;         // 参考行 = 60
+
+    // 从 (x1,y1) 到 (x2,0) 连线，在 y_ref 行处的 x 坐标
+    float x_line = x1 + (x2 - x1) * (y_ref - y1) / (y2 - y1);
+
+    return x_line - mid_x;   // 正 = 偏右，负 = 偏左
+}
+```
+
+**它回答的问题是**："弯道特征点 + 车当前底部中线，这条延长线在图像中间行偏离中心多远"。值越大，说明弯越急、需要转的角度越大。这个值正好可以用来**按比例**算轮速差。
+
+---
+
+## 需要改的三个文件
+
+### 一、`image.c` — 恢复 `judge_where()` 里被注释的 `weighted_error` 计算
+
+找到 `judge_where()`（约第 340 行），**改后**：
+
+```c
+int judge_where()
+{
+    if(up.road[0] > 0 && left.road[0] >= 1 && right.road[0] == 0)
+    {
+        // ★ 用左区域第一个特征点算弯道虚拟偏差
+        weighted_error = calculate_deviation(left.zuobiao[0][1], left.zuobiao[0][0]);
+        return 3;
+    }
+    if(up.road[0] > 0 && left.road[0] == 0 && right.road[0] >= 1)
+    {
+        // ★ 用右区域第一个特征点算弯道虚拟偏差
+        weighted_error = calculate_deviation(right.zuobiao[0][1], right.zuobiao[0][0]);
+        return 4;
+    }
+    return 0;
+}
+```
+
+---
+
+### 二、`connect.c` — 用 `weighted_error` 直接算轮速
+
+```c
+#include "image.h"
+#include "motor.h"
+#include "zf_common_headfile.h"
+
+
+#define BASE_SPEED            70.0f
+
+/* 弯道轮速差参数 */
+#define TURN_GAIN             2.0f    // weighted_error(像素) → 轮速差 的增益
+#define TURN_MIN_DIFF         15.0f   // 最小差速，保证能转起来
+#define TURN_MAX_DIFF         50.0f   // 最大差速，防止翻车
+
+#define TURN_MIN_TICK         20
+#define TURN_MAX_TICK         110
+#define TURN_EXIT_ERROR       6.0f
+
+
+typedef enum
+{
+    follow_state = 0,
+    turn_left_state = 3,
+    turn_right_state = 4,
+    turn_back_state = 5,
+} driver_state;
+
+driver_state Go = follow_state;
+
+static uint16 turn_tick = 0;
+
+
+void state_machine(void)
+{
+    int order = judge_where();        // 会更新 weighted_error
+    float error = Deviation();
+
+    switch(Go)
+    {
+        case follow_state:
+        {
+            turn_tick = 0;
+
+            if(order == 3)
+            {
+                Go = turn_left_state;
+            }
+            else if(order == 4)
+            {
+                Go = turn_right_state;
+            }
+
+            break;
+        }
+
+        case turn_left_state:
+        {
+            turn_tick++;
+
+            /* ★ 直接用 weighted_error 算轮速差 */
+            float diff = TURN_GAIN * fabsf(weighted_error);
+            if(diff > TURN_MAX_DIFF) diff = TURN_MAX_DIFF;
+            if(diff < TURN_MIN_DIFF) diff = TURN_MIN_DIFF;
+
+            pid_speed_L.target = BASE_SPEED - diff;   // 左轮慢
+            pid_speed_R.target = BASE_SPEED + diff;   // 右轮快
+
+            if(turn_tick > TURN_MIN_TICK)
+            {
+                if((error > -TURN_EXIT_ERROR && error < TURN_EXIT_ERROR)
+                   || turn_tick > TURN_MAX_TICK)
+                {
+                    Go = follow_state;
+                    turn_tick = 0;
+                }
+            }
+
+            break;
+        }
+
+        case turn_right_state:
+        {
+            turn_tick++;
+
+            /* ★ 右转：右轮慢，左轮快 */
+            float diff = TURN_GAIN * fabsf(weighted_error);
+            if(diff > TURN_MAX_DIFF) diff = TURN_MAX_DIFF;
+            if(diff < TURN_MIN_DIFF) diff = TURN_MIN_DIFF;
+
+            pid_speed_L.target = BASE_SPEED + diff;
+            pid_speed_R.target = BASE_SPEED - diff;
+
+            if(turn_tick > TURN_MIN_TICK)
+            {
+                if((error > -TURN_EXIT_ERROR && error < TURN_EXIT_ERROR)
+                   || turn_tick > TURN_MAX_TICK)
+                {
+                    Go = follow_state;
+                    turn_tick = 0;
+                }
+            }
+
+            break;
+        }
+
+        default:
+        {
+            Go = follow_state;
+            turn_tick = 0;
+            break;
+        }
+    }
+}
+```
+
+---
+
+### 三、`motor.c` 的 `line_control()` — 状态机不阻断，弯道跳过 PD
+
+```c
+void line_control(void)
+{
+    state_machine();   // 弯道时会直接设好 pid_speed_L/R.target
+
+   
+[2026-06-28T11:19:31.738Z] [CACHE_HIT_RATE] {"sid":"s_mqxo8ltl_f618","iter":1,"hit":41216,"miss":5595,"rate":0.8805}
+[2026-06-28T11:19:31.738Z] [SEND_END] {"sid":"s_mqxo8ltl_f618","iters":0,"asst_chars":6085}
+[2026-06-28T11:21:12.453Z] [USER_SEND] {"sid":"s_mqxo8ltl_f618","len":9,"model":"deepseek-v4-pro","baseUrl":"","mode":"manual","text":"fabsf这个在哪"}
+[2026-06-28T11:21:12.454Z] [INTERACTION_MODE] {"mode":"agent"}
+[2026-06-28T11:21:12.455Z] [ITER_START] {"sid":"s_mqxo8ltl_f618","iter":1,"msg_count":28,"est_tokens":30968}
+[2026-06-28T11:21:12.455Z] [HTTP_REQUEST] {"url":"https://api.deepseek.com","model":"deepseek-v4-pro","msg_count":28}
+[2026-06-28T11:21:15.261Z] [THINK]
+The user is asking where `fabsf` is defined. Let me check the
+[/THINK]
+[2026-06-28T11:21:15.679Z] [THINK]
+ project's includes and libraries for math functions.
+
+`fabsf` is a
+[/THINK]
+[2026-06-28T11:21:16.089Z] [THINK]
+ standard C library function for computing the absolute value of a float. It's declared in `<math.h>`. Let me check if math
+[/THINK]
+[2026-06-28T11:21:16.505Z] [THINK]
+.h is already included in the project and what the compilation environment looks like.
+
+Actually, looking at `image.c`, I see it already includes `<math.h
+[/THINK]
+[2026-06-28T11:21:16.953Z] [THINK]
+>`:
+```c
+#include <math.h>
+```
+
+And `connect.c` includes `zf_common_headfile.h` which might pull in math.h too. But the user is asking about
+[/THINK]
+[2026-06-28T11:21:17.409Z] [THINK]
+ `fabsf` specifically.
+
+For embedded systems like AURIX TC264 with the Task
+[/THINK]
+[2026-06-28T11:21:17.813Z] [THINK]
+ing compiler, `fabsf` should be available in `<math.h>`. However, on some embedded compilers, `fabsf` might not be available, and you'd use `fabs
+[/THINK]
+[2026-06-28T11:21:18.281Z] [THINK]
+` instead (which works with doubles, but gets promoted), or define your own.
+
+Let me check if
+[/THINK]
+[2026-06-28T11:21:18.685Z] [THINK]
+ `fabsf` is used anywhere in the project or if there's a simpler alternative.
+
+Actually, I already used `fabsf` in my suggested
+[/THINK]
+[2026-06-28T11:21:19.149Z] [THINK]
+ code. Let me tell the user where it comes from and give alternatives.
+
+The simplest approach for this embedded project
+[/THINK]
+[2026-06-28T11:21:19.632Z] [THINK]
+: just use a conditional or a simple macro instead of `fabsf`. Since
+[/THINK]
+[2026-06-28T11:21:20.044Z] [THINK]
+ `weighted_error` is a float, we can do:
+
+```c
+float diff = TURN_GAIN * (weighted_error < 0 ? -weighted_error : weighted_error
+[/THINK]
+[2026-06-28T11:21:20.463Z] [THINK]
+);
+```
+
+Or include `<math.h>` and use `fabsf`.
+
+Let me just answer quickly.
+[/THINK]
+[2026-06-28T11:21:23.159Z] [STREAM_DONE] {"elapsed_ms":10704,"ttfb_ms":829,"chunks":516,"tool_calls":0}
+[2026-06-28T11:21:23.160Z] [ITER_END] {"sid":"s_mqxo8ltl_f618","iter":1,"elapsed_ms":10704,"assistant_chars":404,"reasoning_chars":1373,"tool_calls":0,"usage":{"prompt_tokens":49008,"completion_tokens":515,"total_tokens":49523,"prompt_tokens_details":{"cached_tokens":46720},"completion_tokens_details":{"reasoning_tokens":344},"prompt_cache_hit_tokens":46720,"prompt_cache_miss_tokens":2288}}
+[2026-06-28T11:21:23.160Z] [ASSISTANT] `fabsf` 是 C 标准库函数，声明在 `<math.h>` 里。你的 `image.c` 已经 `#include <math.h>` 了，所以可以直接用。
+
+不过嵌入式环境有时不支持 `fabsf`，最稳妥的做法是自己写，不需要依赖 math 库：
+
+## 简单替代
+
+把我方案里的：
+```c
+float diff = TURN_GAIN * fabsf(weighted_error);
+```
+
+换成：
+```c
+float diff = TURN_GAIN * (weighted_error < 0 ? -weighted_error : weighted_error);
+```
+
+或者干脆写一个局部内联：
+
+```c
+float diff = TURN_GAIN * weighted_error;
+if(diff < 0) diff = -diff;
+```
+
+这样不依赖任何库函数。
+[2026-06-28T11:21:23.160Z] [CACHE_HIT_RATE] {"sid":"s_mqxo8ltl_f618","iter":1,"hit":46720,"miss":2288,"rate":0.9533}
+[2026-06-28T11:21:23.160Z] [SEND_END] {"sid":"s_mqxo8ltl_f618","iters":0,"asst_chars":404}
