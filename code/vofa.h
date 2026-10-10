@@ -25,18 +25,18 @@ typedef struct
 }PIDNUM;
 
 extern PIDNUM NUM;
-extern uint8 uart_get_data[64];                                                        // ´®¿Ú½ÓÊÕÊı¾İ»º³åÇø
-extern uint8 fifo_get_data[64];                                                        // fifo Êä³ö¶Á³ö»º³åÇø
+extern uint8 uart_get_data[64];                                                        // ä¸²å£æ¥æ”¶æ•°æ®ç¼“å†²åŒº
+extern uint8 fifo_get_data[64];                                                        // fifo è¾“å‡ºè¯»å‡ºç¼“å†²åŒº
  
-extern uint8  get_data;                                                      // ½ÓÊÕÊı¾İ±äÁ¿
+extern uint8  get_data;                                                      // æ¥æ”¶æ•°æ®å˜é‡
 extern uint32 fifo_data_count;
-// fifo Êı¾İ¸öÊı
+// fifo æ•°æ®ä¸ªæ•°
 void seekfree_send_speed_pid_wave();
 extern fifo_struct uart_data_fifo;
 
-#define UART_INDEX              (DEBUG_UART_INDEX   )                           // Ä¬ÈÏ UART_0
-#define UART_BAUDRATE           (DEBUG_UART_BAUDRATE)                           // Ä¬ÈÏ 115200
-#define UART_TX_PIN             (DEBUG_UART_TX_PIN  )                           // Ä¬ÈÏ UART0_TX_P14_0
+#define UART_INDEX              (DEBUG_UART_INDEX   )                           // é»˜è®¤ UART_0
+#define UART_BAUDRATE           (DEBUG_UART_BAUDRATE)                           // é»˜è®¤ 115200
+#define UART_TX_PIN             (DEBUG_UART_TX_PIN  )                           // é»˜è®¤ UART0_TX_P14_0
 #define UART_RX_PIN             (DEBUG_UART_RX_PIN  )
 
 #endif

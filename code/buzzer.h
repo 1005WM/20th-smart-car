@@ -1,7 +1,7 @@
 /*
  * buzzer.h
  *
- *  Created on: 2026Äê7ÔÂ5ÈÕ
+ *  Created on: 2026å¹´7æœˆ5æ—¥
  *      Author: hp
  */
 
@@ -16,7 +16,7 @@
 void buzzer_init(void);
 void buzzer_on(void);
 void buzzer_off(void);
-void buzzer_beep(uint16 ticks);    // ticks ÒÔ 10ms Îªµ¥Î»
+void buzzer_beep(uint16 ticks);    // ticks ä»¥ 10ms ä¸ºå•ä½
 void buzzer_tick(void);
 
 

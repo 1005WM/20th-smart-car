@@ -1,7 +1,7 @@
 /*
  * connect.c
  *
- *  Created on: 2026��6��28��
+ *  Created on: 2026年6月28日
  *      Author: hp
  */
 
@@ -14,8 +14,8 @@
 
 #define BASE_SPEED          70.0f
 
-#define TURN_MIN_TICK       20      // 10ms����һ��
-#define TURN_MAX_TICK       110     // 1100ms����ֹ����
+#define TURN_MIN_TICK       20      // 10ms执行一次
+#define TURN_MAX_TICK       110     // 1100ms后停止转向
 #define TURN_EXIT_ERROR     6.0f
 
 
@@ -73,7 +73,7 @@ uint8 state_machine(void)
             turn_tick++;
 
            
-            float diff=0.7f*fabsf(weighted_error);//�����޸ĵ��ڹ���������
+            float diff=0.7f*fabsf(weighted_error);//通过偏差调节左右轮转速差
             pid_speed_L.target=BASE_SPEED-diff;
             pid_speed_R.target=BASE_SPEED+diff;
 
@@ -94,7 +94,7 @@ uint8 state_machine(void)
             turn_tick++;
 
             
-               float diff=1.0f * fabsf(weighted_error);//�����޸ĵ��ڹ���������
+               float diff=1.0f * fabsf(weighted_error);//通过偏差调节左右轮转速差
 
                pid_speed_L.target = BASE_SPEED + diff;
                pid_speed_R.target = BASE_SPEED - diff;

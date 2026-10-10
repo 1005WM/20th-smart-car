@@ -1,14 +1,14 @@
 /*
  * motor.c
  *
- *  Created on: 2026锟斤拷6锟斤拷7锟斤拷
+ *  Created on: 2026年6月7日
  *      Author: hp
  */
 #include "image.h"
 #include "motor.h"
 #include "zf_common_headfile.h"
 /*
- * base_speed锟斤拷motor.c锟侥碉拷251锟叫达拷锟斤拷锟叫革拷值
+ * base_speed在motor.c中的251行处有赋值
  * */
 //ATOM3_CH4_P11_9turn.....ATOM2_CH5_P11_10pwm
 #define motor_right_turn ATOM2_CH4_P11_9
@@ -42,13 +42,13 @@ void Encoder_Init()
 void Encoder_Data_Get(void)
 {
     motor_L.encoder_raw=-encoder_get_count(TIM4_ENCODER);
-    motor_L.encoder_speed=motor_L.encoder_speed*0.5+motor_L.encoder_raw*0.5;     //0.5锟角平均拷锟斤拷锟斤拷权锟斤拷50%
-    motor_L.total_encoder+= motor_L.encoder_raw;//锟斤拷锟斤拷锟斤拷锟桔硷拷值
+    motor_L.encoder_speed=motor_L.encoder_speed*0.5+motor_L.encoder_raw*0.5;     //0.5是平均数据权重50%
+    motor_L.total_encoder+= motor_L.encoder_raw;//累计总编码器值
     encoder_clear_count(TIM4_ENCODER);
 
     motor_R.encoder_raw=encoder_get_count(TIM6_ENCODER);
     motor_R.encoder_speed=motor_R.encoder_speed*0.5+motor_R.encoder_raw*0.5;
-    motor_R.total_encoder+= motor_R.encoder_raw;//锟斤拷锟斤拷锟斤拷锟桔硷拷值
+    motor_R.total_encoder+= motor_R.encoder_raw;//累计总编码器值
     encoder_clear_count(TIM6_ENCODER);
 }
 void Encoder_Data_distance()
@@ -91,22 +91,22 @@ void motor_init()
 *************************/
 void Motor_SetSpeed(int pwm1,int pwm2)
 {
-    // 锟斤拷锟斤拷
+    // 左电机
     if(pwm1>max_pwm)pwm1=max_pwm;
     if(pwm1<-max_pwm)pwm1=-max_pwm;
     if(pwm1>=0)
     {
 
-        pwm_set_duty(motor_left_turn,0);//锟斤拷锟斤拷锟斤拷转
-        pwm_set_duty(motor_left_pwm,pwm1);//锟斤拷锟斤拷PWM
+        pwm_set_duty(motor_left_turn,0);//左电机正转
+        pwm_set_duty(motor_left_pwm,pwm1);//左电机PWM
 
     }
     else
     {
-        pwm_set_duty(motor_left_turn,-pwm1);//锟斤拷锟斤拷PWM
-        pwm_set_duty(motor_left_pwm,0);//锟斤拷锟斤拷锟斤拷锟斤拷
+        pwm_set_duty(motor_left_turn,-pwm1);//左电机PWM
+        pwm_set_duty(motor_left_pwm,0);//左电机方向
     }
-    //锟揭碉拷锟�
+    //右电机
     if(pwm2>max_pwm)pwm2=max_pwm;
     if(pwm2<-max_pwm)pwm2=-max_pwm;
     if(pwm2>=0)
@@ -144,7 +144,7 @@ Increase_pid pid_speed_R;
 //增量式PID左轮
 float Speed_pid_left(Increase_pid *pid_left,float encoder_speed_left)
 {
-    pid_left->error_curr=pid_left->target-encoder_speed_left; //锟斤拷锟姐当前锟斤拷锟�
+    pid_left->error_curr=pid_left->target-encoder_speed_left; //计算当前误差
     //增量式PID
     pid_left->out+=(pid_left->Kp*(pid_left->error_curr-pid_left->error_last)+
                 pid_left->Ki*pid_left->error_curr+
@@ -190,8 +190,8 @@ float Speed_pid_right(Increase_pid *pid_right,float encoder_speed_right)
     return pid_right->out;
 }
 /*****************************
- * 锟斤拷锟斤拷锟斤拷锟斤拷
- * 锟斤拷锟斤拷锟斤拷static int Motor_Start_Compensate(float pid_out, float target, int encoder_speed, int min_pwm);
+ * 启动补偿
+ * 函数名：static int Motor_Start_Compensate(float pid_out, float target, int encoder_speed, int min_pwm);
  *******************************/
 static int Motor_Start_Compensate(float pid_out, float target, int encoder_speed, int min_pwm)
 {
@@ -201,7 +201,7 @@ static int Motor_Start_Compensate(float pid_out, float target, int encoder_speed
     {
         return 0;
     }
-    // 只锟斤拷锟斤拷锟接硷拷锟斤拷没锟斤拷时锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟襟交革拷PID
+    // 只在编码器几乎没转时补一个最小占空比，避免起步时PID输出不足
     if(encoder_speed > -5 && encoder_speed < 5)
     {
         if(target > 0 && pwm < min_pwm)
@@ -224,9 +224,9 @@ static int Motor_Start_Compensate(float pid_out, float target, int encoder_speed
 float PositionPID_calculate(pid_position*pid,int32 target_position,int32 actual_position,int32 actual_speed)
 {
     int32 error_position=target_position-actual_position;         //位置误差
-    float P = pid->Kp*error_position;      //偏锟斤拷越锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟皆斤拷锟�
+    float P = pid->Kp*error_position;      //偏差越大，输出驱动力越大
     float D = pid->Kd*(-actual_speed);    
-    float output=P + D;            //原始锟斤拷锟斤拷锟斤拷
+    float output=P + D;            //原始控制量
     //输出限制
     if(output>pid->output_limit)
     {
@@ -257,7 +257,7 @@ void PositionPid_Init(void)
  ******************************/
 void Pid_Init(void)
 {
-    Increase_pid_init(&pid_speed_L,5.0f,0.05f,0.0f,-1200,1200);//锟结构锟藉，kp,ki,kd,锟斤拷锟斤拷锟叫★拷锟斤拷锟斤拷锟斤拷锟�
+    Increase_pid_init(&pid_speed_L,5.0f,0.05f,0.0f,-1200,1200);//传入结构体，kp,ki,kd,输出下限，输出上限
     Increase_pid_init(&pid_speed_R,6.0f,0.008f,0.0f,-1500,1500);
     PositionPid_Init();
     //pid_speed_L.target = 70.0f;

@@ -1,32 +1,32 @@
 #include"vofa.h"
 #include <math.h> 
 
-uint8 uart_get_data[64];                                                 // ´®¿Ú½ÓÊÕÊı¾İ»º³åÇø
-uint8 fifo_get_data[64];                                                // fifo Êä³ö¶Á³ö»º³åÇø
-uint8  get_data = 0;                                                  // ½ÓÊÕÊı¾İ±äÁ¿
-uint32 fifo_data_count = 0;                                         // fifo Êı¾İ¸öÊı
+uint8 uart_get_data[64];                                                 // ä¸²å£æ¥æ”¶æ•°æ®ç¼“å†²åŒº
+uint8 fifo_get_data[64];                                                // fifo è¾“å‡ºè¯»å‡ºç¼“å†²åŒº
+uint8  get_data = 0;                                                  // æ¥æ”¶æ•°æ®å˜é‡
+uint32 fifo_data_count = 0;                                         // fifo æ•°æ®ä¸ªæ•°
 fifo_struct uart_data_fifo;
 PIDNUM NUM;
 
 void Init_uart(void)
 {
-      fifo_init(&uart_data_fifo, FIFO_DATA_8BIT, uart_get_data, 64); // ³õÊ¼»¯ fifo ¹ÒÔØ»º³åÇø
-      uart_init(UART_INDEX, UART_BAUDRATE, UART_TX_PIN, UART_RX_PIN);   // ³õÊ¼»¯´®¿Ú
-      uart_rx_interrupt(UART_INDEX, 1);                   // ¿ªÆô UART_INDEX µÄ½ÓÊÕÖĞ¶Ï
+      fifo_init(&uart_data_fifo, FIFO_DATA_8BIT, uart_get_data, 64); // åˆå§‹åŒ– fifo æŒ‚è½½ç¼“å†²åŒº
+      uart_init(UART_INDEX, UART_BAUDRATE, UART_TX_PIN, UART_RX_PIN);   // åˆå§‹åŒ–ä¸²å£
+      uart_rx_interrupt(UART_INDEX, 1);                   // å¼€å¯ UART_INDEX çš„æ¥æ”¶ä¸­æ–­
  
-      uart_write_string(UART_INDEX, "UART Text.");                  // Êä³ö²âÊÔĞÅÏ¢
-      uart_write_byte(UART_INDEX, '\r');                                   // Êä³ö»Ø³µ
+      uart_write_string(UART_INDEX, "UART Text.");                  // è¾“å‡ºæµ‹è¯•ä¿¡æ¯
+      uart_write_byte(UART_INDEX, '\r');                                   // è¾“å‡ºå›è½¦
       uart_write_byte(UART_INDEX, '\n');
 }
 
 void Send_test(void)
 {
-    fifo_data_count = fifo_used(&uart_data_fifo);                           // ²é¿´ fifo ÊÇ·ñÓĞÊı¾İ
-            if(fifo_data_count != 0)                                                // ¶ÁÈ¡µ½Êı¾İÁË
+    fifo_data_count = fifo_used(&uart_data_fifo);                           // æŸ¥çœ‹ fifo æ˜¯å¦æœ‰æ•°æ®
+            if(fifo_data_count != 0)                                                // è¯»å–åˆ°æ•°æ®äº†
             {
-                fifo_read_buffer(&uart_data_fifo, fifo_get_data, &fifo_data_count, FIFO_READ_AND_CLEAN);    // ½« fifo ÖĞÊı¾İ¶Á³ö²¢Çå¿Õ fifo ¹ÒÔØµÄ»º³å
-                uart_write_string(UART_INDEX, "\r\nUART get data:");                // Êä³ö²âÊÔĞÅÏ¢
-                uart_write_buffer(UART_INDEX, fifo_get_data, fifo_data_count);      // ½«¶ÁÈ¡µ½µÄÊı¾İ·¢ËÍ³öÈ¥
+                fifo_read_buffer(&uart_data_fifo, fifo_get_data, &fifo_data_count, FIFO_READ_AND_CLEAN);    // å°† fifo ä¸­æ•°æ®è¯»å‡ºå¹¶æ¸…ç©º fifo æŒ‚è½½çš„ç¼“å†²
+                uart_write_string(UART_INDEX, "\r\nUART get data:");                // è¾“å‡ºæµ‹è¯•ä¿¡æ¯
+                uart_write_buffer(UART_INDEX, fifo_get_data, fifo_data_count);      // å°†è¯»å–åˆ°çš„æ•°æ®å‘é€å‡ºå»
             }
             system_delay_ms(10);
 }
@@ -34,31 +34,31 @@ void Send_test(void)
 
 
 //-------------------------------------------------------------------------------------------------------------------
-// º¯Êı¼ò½é       UART_INDEX µÄ½ÓÊÕÖĞ¶Ï´¦Àíº¯Êı Õâ¸öº¯Êı½«ÔÚ UART_INDEX ¶ÔÓ¦µÄÖĞ¶Ïµ÷ÓÃ
-// ²ÎÊıËµÃ÷       void
-// ·µ»Ø²ÎÊı       void
-// Ê¹ÓÃÊ¾Àı       uart_rx_interrupt_handler();
+// å‡½æ•°ç®€ä»‹       UART_INDEX çš„æ¥æ”¶ä¸­æ–­å¤„ç†å‡½æ•° è¿™ä¸ªå‡½æ•°å°†åœ¨ UART_INDEX å¯¹åº”çš„ä¸­æ–­è°ƒç”¨
+// å‚æ•°è¯´æ˜       void
+// è¿”å›å‚æ•°       void
+// ä½¿ç”¨ç¤ºä¾‹       uart_rx_interrupt_handler();
 //-------------------------------------------------------------------------------------------------------------------
 void uart_rx_interrupt_handler (void)
 {
-//    get_data = uart_read_byte(UART_INDEX);                                      // ½ÓÊÕÊı¾İ while µÈ´ıÊ½ ²»½¨ÒéÔÚÖĞ¶ÏÊ¹ÓÃ
-    uart_query_byte(UART_INDEX, &get_data);                                     // ½ÓÊÕÊı¾İ ²éÑ¯Ê½ ÓĞÊı¾İ»á·µ»Ø TRUE Ã»ÓĞÊı¾İ»á·µ»Ø FALSE
-    fifo_write_buffer(&uart_data_fifo, &get_data, 1);                           // ½«Êı¾İĞ´Èë fifo ÖĞ
+//    get_data = uart_read_byte(UART_INDEX);                                      // æ¥æ”¶æ•°æ® while ç­‰å¾…å¼ ä¸å»ºè®®åœ¨ä¸­æ–­ä½¿ç”¨
+    uart_query_byte(UART_INDEX, &get_data);                                     // æ¥æ”¶æ•°æ® æŸ¥è¯¢å¼ æœ‰æ•°æ®ä¼šè¿”å› TRUE æ²¡æœ‰æ•°æ®ä¼šè¿”å› FALSE
+    fifo_write_buffer(&uart_data_fifo, &get_data, 1);                           // å°†æ•°æ®å†™å…¥ fifo ä¸­
 }
 //-------------------------------------------------------------------------------------------------------------------
-// º¯Êı¼ò½é       ½«vofaÖĞ»Ø´«µÄÊı¾İ½âÎö
-// ²ÎÊıËµÃ÷       void
-// ·µ»Ø²ÎÊı       void
-// Ê¹ÓÃÊ¾Àı      data=Get_Data();
+// å‡½æ•°ç®€ä»‹       å°†vofaä¸­å›ä¼ çš„æ•°æ®è§£æ
+// å‚æ•°è¯´æ˜       void
+// è¿”å›å‚æ•°       void
+// ä½¿ç”¨ç¤ºä¾‹      data=Get_Data();
 
 //-------------------------------------------------------------------------------------------------------------------
 float Get_Data(void)
 {
-    uint8_t data_Start_Num = 0; // ¼ÇÂ¼Êı¾İÎ»¿ªÊ¼µÄµØ·½
-    uint8_t data_End_Num = 0; // ¼ÇÂ¼Êı¾İÎ»½áÊøµÄµØ·½
-    uint8_t data_Num = 0; // ¼ÇÂ¼Êı¾İÎ»Êı
-    uint8_t minus_Flag = 0; // ÅĞ¶ÏÊÇ²»ÊÇ¸ºÊı
-    float data_return = 0; // ½âÎöµÃµ½µÄÊı¾İ
+    uint8_t data_Start_Num = 0; // è®°å½•æ•°æ®ä½å¼€å§‹çš„åœ°æ–¹
+    uint8_t data_End_Num = 0; // è®°å½•æ•°æ®ä½ç»“æŸçš„åœ°æ–¹
+    uint8_t data_Num = 0; // è®°å½•æ•°æ®ä½æ•°
+    uint8_t minus_Flag = 0; // åˆ¤æ–­æ˜¯ä¸æ˜¯è´Ÿæ•°
+    float data_return = 0; // è§£æå¾—åˆ°çš„æ•°æ®
     uint8_t valid = 0;
 
     
@@ -67,18 +67,18 @@ float Get_Data(void)
         if(fifo_get_data[i] == '=') 
         {
             data_Start_Num = i + 1;
-            valid |= 0x01;  // ±ê¼ÇÕÒµ½µÈºÅ
+            valid |= 0x01;  // æ ‡è®°æ‰¾åˆ°ç­‰å·
         }
         if(fifo_get_data[i] == '!') 
         {
             data_End_Num = i - 1;
-            valid |= 0x02;  // ±ê¼ÇÕÒµ½¸ĞÌ¾ºÅ
+            valid |= 0x02;  // æ ‡è®°æ‰¾åˆ°æ„Ÿå¹å·
             break;
         }
     }
-    if(valid != 0x03) return 0.0f; // ¼ì²é¸ñÊ½ÓĞĞ§ĞÔ
+    if(valid != 0x03) return 0.0f; // æ£€æŸ¥æ ¼å¼æœ‰æ•ˆæ€§
 
-    // ÓÅ»¯2£º°²È«´¦Àí¸ºÊı
+    // ä¼˜åŒ–2ï¼šå®‰å…¨å¤„ç†è´Ÿæ•°
     uint8_t cursor = data_Start_Num;
     if(cursor <= data_End_Num && fifo_get_data[cursor] == '-') 
     {
@@ -86,7 +86,7 @@ float Get_Data(void)
         cursor++;
     }
 
-    // ÓÅ»¯3£º¶¯Ì¬¼ÆËãÊıÖµ
+    // ä¼˜åŒ–3ï¼šåŠ¨æ€è®¡ç®—æ•°å€¼
     uint8_t decimal_pos = 0;
     uint8_t has_decimal = 0;
     data_return = 0.0f;
@@ -100,9 +100,9 @@ float Get_Data(void)
             continue;
         }
         
-        // ×Ö·û×ªÊı×Ö£¨¸ü°²È«µÄĞ´·¨£©
-        uint8_t digit = fifo_get_data[i] - '0';  // Ìæ»»Ô­48Îª'0'
-        if(digit > 9) return 0.0f; // ·Ç·¨×Ö·û
+        // å­—ç¬¦è½¬æ•°å­—ï¼ˆæ›´å®‰å…¨çš„å†™æ³•ï¼‰
+        uint8_t digit = fifo_get_data[i] - '0';  // æ›¿æ¢åŸ48ä¸º'0'
+        if(digit > 9) return 0.0f; // éæ³•å­—ç¬¦
         
         if(has_decimal)
             data_return += digit * powf(0.1, i - cursor - decimal_pos);
@@ -114,48 +114,48 @@ float Get_Data(void)
    }
  
 //-------------------------------------------------------------------------------------------------------------------
-// º¯Êı¼ò½é       ½«vofaÖĞ»Ø´«µÄÊı¾İ½âÎö·Ö±ğ¸³Öµ
-// ²ÎÊıËµÃ÷       void
-// ·µ»Ø²ÎÊı       void
-// Ê¹ÓÃÊ¾Àı      USART_PID_Adjust()
+// å‡½æ•°ç®€ä»‹       å°†vofaä¸­å›ä¼ çš„æ•°æ®è§£æåˆ†åˆ«èµ‹å€¼
+// å‚æ•°è¯´æ˜       void
+// è¿”å›å‚æ•°       void
+// ä½¿ç”¨ç¤ºä¾‹      USART_PID_Adjust()
 //-------------------------------------------------------------------------------------------------------------------
  
 void USART_PID_Adjust()
 {
-    float data_Get = Get_Data(); // ´æ·Å½ÓÊÕµ½µÄÊı¾İ
+    float data_Get = Get_Data(); // å­˜æ”¾æ¥æ”¶åˆ°çš„æ•°æ®
     printf("data=%.2f\r\n",data_Get);
-        // if(fifo_get_data[0]=='P' && fifo_get_data[1]=='1') // ½Ç¶È»·P
+        // if(fifo_get_data[0]=='P' && fifo_get_data[1]=='1') // è§’åº¦ç¯P
         //     NUM.angle_p = data_Get;
-        // else if(fifo_get_data[0]=='I' && fifo_get_data[1]=='1') // ½Ç¶È»·I
+        // else if(fifo_get_data[0]=='I' && fifo_get_data[1]=='1') // è§’åº¦ç¯I
         //     NUM.angle_i = data_Get;
-        // else if(fifo_get_data[0]=='D' && fifo_get_data[1]=='1') // ½Ç¶È»·D
+        // else if(fifo_get_data[0]=='D' && fifo_get_data[1]=='1') // è§’åº¦ç¯D
         //     NUM.angle_d = data_Get;
         if(fifo_get_data[0] == 'P')
          {
             if(fifo_get_data[1] == '1') 
-            NUM.angle_p = data_Get;      // ½Ç¶È»·P
+            NUM.angle_p = data_Get;      // è§’åº¦ç¯P
             else if(fifo_get_data[1] == '2') 
-            NUM.anglev_p = data_Get; // ½ÇËÙ¶È»·P
+            NUM.anglev_p = data_Get; // è§’é€Ÿåº¦ç¯P
             else if(fifo_get_data[1] == '3') 
-            NUM.speed_p = data_Get; // ËÙ¶È»·P
+            NUM.speed_p = data_Get; // é€Ÿåº¦ç¯P
         }
         else if(fifo_get_data[0] == 'I') 
         {
             if(fifo_get_data[1] == '1')
-             NUM.angle_i = data_Get;      // ½Ç¶È»·I
+             NUM.angle_i = data_Get;      // è§’åº¦ç¯I
             else if(fifo_get_data[1] == '2')
-             NUM.anglev_i = data_Get; // ½ÇËÙ¶È»·I
+             NUM.anglev_i = data_Get; // è§’é€Ÿåº¦ç¯I
             else if(fifo_get_data[1] == '3')
-             NUM.speed_i = data_Get; // ËÙ¶È»·I
+             NUM.speed_i = data_Get; // é€Ÿåº¦ç¯I
         }
         else if(fifo_get_data[0] == 'D')
          {
             if(fifo_get_data[1] == '1') 
-            NUM.angle_d = data_Get;      // ½Ç¶È»·D
+            NUM.angle_d = data_Get;      // è§’åº¦ç¯D
             else if(fifo_get_data[1] == '2')
-             NUM.anglev_d= data_Get; // ½ÇËÙ¶È»·D
+             NUM.anglev_d= data_Get; // è§’é€Ÿåº¦ç¯D
             else if(fifo_get_data[1] == '3')
-             NUM.speed_d = data_Get; // ËÙ¶È»·D
+             NUM.speed_d = data_Get; // é€Ÿåº¦ç¯D
         }
  }
 

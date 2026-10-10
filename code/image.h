@@ -1,7 +1,7 @@
 /*
  * image.h
  *
- *  Created on: 2026锟斤拷6锟斤拷5锟斤拷
+ *  Created on: 2026年6月5日
  *      Author: hp
  */
 
@@ -10,7 +10,7 @@
 
 #include "zf_common_headfile.h"
 extern int threhold;
- extern float weighted_error;//偏锟斤拷
+ extern float weighted_error;//偏差
 #define CROP_H  90      // 裁剪后高度
 #define CROP_W  168  //宽度
 

@@ -1,7 +1,7 @@
 /*
  * motor.h
  *
- *  Created on: 2026锟斤拷6锟斤拷7锟斤拷
+ *  Created on: 2026年6月7日
  *      Author: hp
  */
 
@@ -13,29 +13,29 @@ typedef struct {
     float Kp;
     float Ki;
     float Kd;
-    float target;  //目锟斤拷值
-    float error_curr,error_last,error_prev;//锟斤拷锟斤拷锟斤拷锟�
-    float out;//锟斤拷锟街�
-    float out_max;//锟斤拷锟斤拷锟斤拷锟�
-    float out_min;//锟斤拷锟斤拷锟斤拷锟�
+    float target;  //目标值
+    float error_curr,error_last,error_prev;//误差项（当前、上次、上上次）
+    float out;//输出
+    float out_max;//输出上限
+    float out_min;//输出下限
 
 }Increase_pid;
 
 typedef struct motor1
 {
-        int target_speed;     //目锟斤拷锟劫讹拷
-        int duty;               //pwm占锟秸憋拷
-        int encoder_speed;         //锟斤拷锟斤拷锟斤拷锟劫讹拷
-        int encoder_raw;          //锟斤拷锟斤拷锟节憋拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷
-        int32 total_encoder;           //锟斤拷锟斤拷锟�
+        int target_speed;     //目标速度
+        int duty;               //pwm占空比
+        int encoder_speed;         //编码器速度
+        int encoder_raw;          //编码器原始计数值
+        int32 total_encoder;           //编码器累计计数
 }motor1;
 
 
 typedef struct pid_position
 {
-     float Kp;      //锟斤拷锟斤拷系锟斤拷锟斤拷锟斤拷锟斤拷位锟斤拷偏锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟�
-     float Kd;       //微锟斤拷系锟斤拷锟斤拷锟斤拷锟斤拷锟劫讹拷锟斤拷锟斤拷
-     float output_limit;        //锟斤拷锟斤拷薹锟�
+     float Kp;      //比例系数（位置偏差越大输出越大）
+     float Kd;       //微分系数（偏差变化速度越大输出越大）
+     float output_limit;        //输出限幅
 }pid_position;
 
 

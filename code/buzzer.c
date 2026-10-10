@@ -1,7 +1,7 @@
 /*
  * buzzer.c
  *
- *  Created on: 2026Äê7ÔÂ5ÈÕ
+ *  Created on: 2026å¹´7æœˆ5æ—¥
  *      Author: hp
  */
 
@@ -20,7 +20,7 @@ void buzzer_off(void) { gpio_low(BUZZ_PIN);  }
 void buzzer_beep(uint16 ticks)
 {
     buzzer_on();
-    buzz_timer = ticks;     // ±ÈÈç 30 ¡ú Ïì 300ms
+    buzz_timer = ticks;     // æ¯”å¦‚ 30 â†’ å“ 300ms
 }
 
 void buzzer_tick(void)

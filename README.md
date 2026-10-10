@@ -475,16 +475,19 @@ ADS → Project → Build Project（或选中工程后点工具栏锤子）
 | 8 | `code/image.c` `Deviation()` | 行区间 90→50 为硬编码，与 `CROP_H=90`、`MT9V03X_1_H=120` 耦合，改分辨率时需同步修改 |
 | 9 | `user/isr.c` | 保留了库模板的空中断分支（ERU CH0/CH2/CH5/CH6/CH7），其中 CH0 分支调用的 `imu660rc_callback()` 与本工程使用的 IMU660RB 不一致，属历史残留 |
 
-### 10.3 源码编码不统一（编辑前必看）
+### 10.3 源码编码已统一为 UTF-8（本次整理）
 
-`code/`、`user/` 下同时存在 **GBK** 与 **UTF-8** 两种编码的文件，且部分 UTF-8 文件中的中文已被替换为 `U+FFFD`（`�`）——这是早期转码造成的**不可逆丢失**：
+原先 `code/`、`user/`、`libraries/` 下的文件编码不统一（GBK 与 UTF-8 混用）：在 GitHub、VS Code 这类按 UTF-8 渲染的环境里，GBK 文件的中文会显示成乱码；另有部分 UTF-8 文件的中文在早期转码中被破坏成了替换符。本次已按下表处理：
 
-| 编码 | 文件 |
-| --- | --- |
-| GBK | `buzzer.c`、`buzzer.h`、`image.c`、`IMU.c`、`justfloat.c`、`vofa.c`、`vofa.h`、`cpu1_main.c`、`isr.c`、`isr.h`、`isr_config.h`、`本文件夹作用.txt` |
-| UTF-8（部分中文为 `�`） | `connect.c`、`connect.h`、`image.h`、`IMU.h`、`justfloat.h`、`motor.c`、`motor.h`、`cpu0_main.c`、`cpu0_main.h` |
+| 处理 | 范围 | 说明 |
+| --- | --- | --- |
+| GBK → UTF-8 转换 | 131 个文件（`code/`、`user/`、`libraries/`、`doc/`、根目录脚本与说明） | 无损转换，只改编码，代码与文字内容一字未动 |
+| 乱码注释修复 | `code/`、`user/` 共 7 个文件、约 100 行 | 逐飞标准版权头与工程模板注释按官方原始文本逐字恢复；其余结合同工程历史副本与代码上下文恢复 |
+| 第三方头文件修复 | `libraries/infineon_libraries/.../IfxGtm_regdef.h` | 3 处 `Register` 之后残留的乱码字符已删除（注释，不影响寄存器定义） |
 
-建议：编辑前先确认目标文件的编码，**逐个文件按原编码保存**，不要对整个目录做批量转码，否则注释会进一步损坏。
+仍有个别注释因原始字节已不可逆丢失（早期转码把中文变成了替换符）而**按语义重写**，含义保持一致；如发现某条与你的原意不符，直接改即可。
+
+工程现在统一为 **UTF-8（无 BOM）**，用 VS Code / ADS 打开都不会再乱码。需要注意：若以后从逐飞官方更新 `libraries/`（官方发布为 GBK），会重新出现编码混用，届时再整体转一次即可。
 
 ### 10.4 建议的修复顺序
 

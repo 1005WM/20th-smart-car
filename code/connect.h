@@ -1,7 +1,7 @@
 /*
  * connect.h
  *
- *  Created on: 2026��6��28��
+ *  Created on: 2026年6月28日
  *      Author: hp
  */
 

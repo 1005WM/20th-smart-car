@@ -6,8 +6,8 @@ for /f "tokens=1* delims=:" %%a in ('findstr /n "^" "%sourceFile%"') do (
     if %%a equ 3 set "target_line=%%b"
 )
 for /f "tokens=3 delims=<>" %%c in ("%target_line%") do set "old_str=%%c"
-echo µ±Ç°¹¤³ÌÃû³Æ: %old_str%
-set /p "userInput=ÇëÊäÈëÐÂµÄ¹¤³ÌÃû³Æ: "
+echo å½“å‰å·¥ç¨‹åç§°: %old_str%
+set /p "userInput=è¯·è¾“å…¥æ–°çš„å·¥ç¨‹åç§°: "
 set "tempFile=temp.txt"
 set "oldString=%old_str%"
 set "newString=%userInput%"
@@ -37,6 +37,6 @@ for /f "delims=" %%i in ('type "%sourceFile%"') do (
     )
 )
 move /y "%tempFile%" "%sourceFile%" >nul 2>&1
-call É¾³ýÁÙÊ±ÎÄ¼þ.bat
+call åˆ é™¤ä¸´æ—¶æ–‡ä»¶.bat
 endlocal
 

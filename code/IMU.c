@@ -1,12 +1,12 @@
 
 #include "zf_common_headfile.h"
 
-gyro_param_t Gyro_Offset;//ÁãÆ®²ÎÊı
-IMU_param_t IMU_Data;//¼ÓËÙ¶È ½ÇËÙ¶È
+gyro_param_t Gyro_Offset;//é›¶é£˜å‚æ•°
+IMU_param_t IMU_Data;//åŠ é€Ÿåº¦ è§’é€Ÿåº¦
 
 
-float gyro_Offset_flag = 0;//±êÖ¾Î»
-float GL_IMU_Flag = 0;//ÍÓÂİÒÇÊı¾İ¿ªÆô±êÖ¾Î»
+float gyro_Offset_flag = 0;//æ ‡å¿—ä½
+float GL_IMU_Flag = 0;//é™€èºä»ªæ•°æ®å¼€å¯æ ‡å¿—ä½
 
 float Z_360 =0;
 float T_M=0;
@@ -15,11 +15,11 @@ float T_N=0;
 void IMU_init()
 {
     imu660rb_init();  
-    IMU_gyro_Offset_Init();//ÁãÆ®³õÊ¼»¯
+    IMU_gyro_Offset_Init();//é›¶é£˜åˆå§‹åŒ–
 }
 
 
-float IMU_gyro_Offset_Init()//ÁãÆ®³õÊ¼»¯
+float IMU_gyro_Offset_Init()//é›¶é£˜åˆå§‹åŒ–
 {
     Gyro_Offset.Xdata = 0;
     Gyro_Offset.Ydata = 0;
@@ -27,10 +27,10 @@ float IMU_gyro_Offset_Init()//ÁãÆ®³õÊ¼»¯
 
     for(uint16_t i=0; i<100;i++)
     {
-        Gyro_Offset.Xdata += imu660rb_gyro_x;//ÈıÖáÊı¾İ
+        Gyro_Offset.Xdata += imu660rb_gyro_x;//ä¸‰è½´æ•°æ®
         Gyro_Offset.Ydata += imu660rb_gyro_y;
         Gyro_Offset.Zdata += imu660rb_gyro_z;
-        system_delay_ms(5);//×î´ó1Khz ²É¼¯Ê±¼ä
+        system_delay_ms(5);//æœ€å¤§1Khz é‡‡é›†æ—¶é—´
     }
 
     Gyro_Offset.Xdata /=100;
@@ -42,7 +42,7 @@ float IMU_gyro_Offset_Init()//ÁãÆ®³õÊ¼»¯
 }
 void  IMU_GetValues()/
 {
-    //ÁéÃô¶È¸ù¾İĞÍºÅÑ¡Ôñ
+    //çµæ•åº¦æ ¹æ®å‹å·é€‰æ‹©
     //IMU660--16.4
     //IMU963--14.3
     IMU_Data.gyro_x = ((float)imu660rb_gyro_x - Gyro_Offset.Xdata) * PI /180 /14.3f;
@@ -53,17 +53,17 @@ void  IMU_GetValues()/
 
 }
 
-//Õı¸º×Ô¼º¿Éµ÷,Ä¬ÈÏË³Ê±ÕëĞı×ª
-void IMU_Handle_0()//¹æ»®Îª0-ÕıÎŞÇîºÍ0-¸ºÎŞÇî  T_N
+//æ­£è´Ÿè‡ªå·±å¯è°ƒ,é»˜è®¤é¡ºæ—¶é’ˆæ—‹è½¬
+void IMU_Handle_0()//è§„åˆ’ä¸º0-æ­£æ— ç©·å’Œ0-è´Ÿæ— ç©·  T_N
 {
     T_N-=RAD_TO_ANGLE(IMU_Data.gyro_z*0.005);
 }
-//180¡ã
+//180Â°
 void IMU_Handle_180()
 {
     Z_360-=RAD_TO_ANGLE(IMU_Data.gyro_z*0.005);
 
-    if((Z_360>0&&Z_360<=180)  ||   (Z_360<0&&Z_360>=(-180)))//Ë³Ê±ÕëĞı×ª
+    if((Z_360>0&&Z_360<=180)  ||   (Z_360<0&&Z_360>=(-180)))//é¡ºæ—¶é’ˆæ—‹è½¬
     {
         Z_360= Z_360;
     }
@@ -77,7 +77,7 @@ void IMU_Handle_180()
     }
 
 }
-//360¶È
+//360åº¦
 void IMU_Handle_360()
 {
     T_M-=RAD_TO_ANGLE(IMU_Data.gyro_z*0.005);
@@ -90,10 +90,10 @@ void IMU_Handle_360()
 
 
 
-void IMU_YAW_integral() //»ı·Ö³ö½Ç¶ÈÖµ
+void IMU_YAW_integral() //ç§¯åˆ†å‡ºè§’åº¦å€¼
 {
     IMU_GetValues();
-    if(IMU_Data.gyro_z<0.015&&IMU_Data.gyro_z>-0.015)//ÂË²¨
+    if(IMU_Data.gyro_z<0.015&&IMU_Data.gyro_z>-0.015)//æ»¤æ³¢
     {
         Z_360-=0;
         T_M-=0;
@@ -101,9 +101,9 @@ void IMU_YAW_integral() //»ı·Ö³ö½Ç¶ÈÖµ
     }
     else
     {
-        IMU_Handle_180();//¹æ»®Îª0-180ºÍ0-(-180)   Z_360
-        IMU_Handle_360();//¹æ»®Îª0-360ºÍ0-(-360)   T_M
-        IMU_Handle_0();//¹æ»®Îª0-ÕıÎŞÇîºÍ0-¸ºÎŞÇî  T_N
+        IMU_Handle_180();//è§„åˆ’ä¸º0-180å’Œ0-(-180)   Z_360
+        IMU_Handle_360();//è§„åˆ’ä¸º0-360å’Œ0-(-360)   T_M
+        IMU_Handle_0();//è§„åˆ’ä¸º0-æ­£æ— ç©·å’Œ0-è´Ÿæ— ç©·  T_N
     }
 
 }
