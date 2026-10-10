@@ -6,7 +6,6 @@
  */
 #include "image.h"
 #include <math.h>
-
 float left_jidian;
 float right_jidian;
 uint8 left_line_save[MT9V03X_1_H]={0};
@@ -24,7 +23,7 @@ float P[256]={0};
 float PK[256]={0};
 float MK[256]={0};
 uint16 huidu[256]={0};
-#define Ostu_threhold_min 100
+
 uint8 Otsu(uint8 mt9v03x_image_1[MT9V03X_1_H][MT9V03X_1_W])
 {
     uint8 image_temp=0;
@@ -69,10 +68,6 @@ uint8 Otsu(uint8 mt9v03x_image_1[MT9V03X_1_H][MT9V03X_1_W])
             value=wondvalue;
             threhold=i;
         }
-    }
-    if(threhold<Ostu_threhold_min)
-    {
-        threhold=Ostu_threhold_min;
     }
     return threhold;
 }
@@ -324,7 +319,7 @@ void judge_num_where()
     memset(&right, 0, sizeof(right));
     //前进方向
     int up_num=0;
-    for(int h=MT9V03X_1_H/2;h<MT9V03X_1_H/2+20;h+=5)//h为行，l为列
+    for(int h=MT9V03X_1_H/2;h<MT9V03X_1_H/2+9;h+=3)//h为行，l为列
     {
         int found=0;
         for(int l=0;l<MT9V03X_1_W-1;l++)
@@ -351,7 +346,7 @@ void judge_num_where()
             left.wwb=0;
             int found=0;
             //行发生黑白跳变
-            for(int h=MT9V03X_1_H/2+10;h<MT9V03X_1_H/2+20;h++)
+            for(int h=MT9V03X_1_H/2-5;h<MT9V03X_1_H/2+5;h++)
             {
             //黑->白跳变
                 if(imageindex[h][l]==0&&imageindex[h+1][l]==255)
@@ -381,7 +376,7 @@ void judge_num_where()
                 right.bbw=0;
                 right.wwb=0;
                 int found=0;
-                for(int h=MT9V03X_1_H/2+10;h<MT9V03X_1_H/2+20;h++)
+                for(int h=MT9V03X_1_H/2-5;h<MT9V03X_1_H/2+5;h++)
                 {
                     //发生了黑白跳变
                     if(imageindex[h][l]==0&&imageindex[h+1][l]==255)
@@ -440,7 +435,7 @@ int my_abs(int num) {
 int judge_up_if_all_black()
 {
     int contine_black=0;
-    for(int h=MT9V03X_1_H/2+20;h>MT9V03X_1_H/2+10;h--)
+    for(int h=30;h>20;h--)
     {   
         int white_count=0;
         for(int l=MT9V03X_1_W/2-20;l<MT9V03X_1_W/2+20;l++)
@@ -452,11 +447,10 @@ int judge_up_if_all_black()
         }
         if(white_count<10)
         {
-            contine_black++;
+            contine_black++;            
         }
-
     }
-    if(contine_black>=3)
+    if(contine_black>=4)
     {
         return 1;
     }
@@ -500,10 +494,10 @@ int judge_where_better_left()
 int jude_where_better_right()
 {
     int contine_white = 0;
-        for(int h = MT9V03X_1_H/2; h < MT9V03X_1_H/2 + 10; h++)
+        for(int h = MT9V03X_1_H/2; h < MT9V03X_1_H/2 + 9; h++)
         {
             int count1 = 0;
-            for(int l = 160; l < 175; l++)
+            for(int l = 165; l < 175; l++)
             {
                 if(imageindex[h][l] == 255)
                 {
@@ -520,7 +514,7 @@ int jude_where_better_right()
                 }
             }
         }
-        if(contine_white >= 3)     // 至少4行满足，减少误判
+        if(contine_white >= 4)     // 至少4行满足，减少误判
             return 7;
         else
             return 0;
@@ -536,7 +530,6 @@ int judge_where()
             if(my_abs(left.zuobiao[0][2] - left.zuobiao[0][0]) >= 5&&judge_where_better_left()==6)
             {
                 weighted_error = calculate_deviation(left.zuobiao[0][1],left.zuobiao[0][0]);
-                buzzer_beep(30);
                 return 3;//左转
 
             }
@@ -546,37 +539,17 @@ int judge_where()
     {
         if(right.zuobiao[0][0]-right.zuobiao[1][0]<=2||right.zuobiao[0][0]-right.zuobiao[2][0]<=2)
         {
-            if(my_abs(right.zuobiao[0][2] - right.zuobiao[0][0]) >= 5)
+            if(my_abs(right.zuobiao[0][2] - right.zuobiao[0][0]) >= 5&&jude_where_better_right()==7)
             {
                 weighted_error = calculate_deviation(right.zuobiao[0][1],right.zuobiao[0][0]);
-                buzzer_beep(30);
                 return 4;//右转
             }
         }
     }
-    if(up.road[0]>0&&left.road[0]>=1&&right.road[0]>=1)
-    {
-        if((distance >= 70 && distance <= 77)||(distance>=186&&distance<=190))
-        {
-            weighted_error = calculate_deviation(left.zuobiao[0][1],left.zuobiao[0][0]);
-        }
-        else
-        {
-            weighted_error = calculate_deviation(right.zuobiao[0][1],right.zuobiao[0][0]);
-        }
-
-        if(weighted_error>=60.0f) weighted_error=60.0f;
-        if(weighted_error<=-60.0f) weighted_error=-60.0f;
-        buzzer_beep(30);
-        return 8; //十字口
-    }
-    /*if(up.road[0]>=0&&left.road[0]>=1&&right.road[0]>=1&&judge_up_if_all_black()==1)
-    {
-        return 9;
-    }*/
     
     return 0;//直行
 }
+
 void ips114_show_line()
 {
     for(int i=0;i<MT9V03X_1_H;i++)
@@ -594,7 +567,6 @@ void image_invocation()//图像处理
     BinaryZation(threhold);
     follow_bianjie(imageindex);
     judge_num_where();
-
 }
 void ips114_screen()
 {
@@ -614,8 +586,7 @@ void ips114_screen()
     ips114_show_float(MT9V03X_1_W/2+45, 0,distance_L, 3,2);
     ips114_show_float(MT9V03X_1_W/2+45, 20,distance_R, 3,2);
     ips114_show_float(MT9V03X_1_W/2+45,35,distance,4,2);
-
-    //ips114_show_int(MT9V03X_1_W/2+30,105,judge_up_if_all_black(),1);
+    ips114_show_int(MT9V03X_1_W/2+45,50,judge_up_if_all_black(),2);
 
 }
 

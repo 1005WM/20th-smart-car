@@ -46,6 +46,8 @@ int core0_main(void)
     clock_init();                   // 锟斤拷取时锟斤拷频锟斤拷<锟斤拷乇锟斤拷锟�?>
     debug_init();                   // 锟斤拷始锟斤拷默锟较碉拷锟皆达拷锟斤拷
     // 锟剿达拷锟斤拷写锟矫伙拷锟斤拷锟斤拷 锟斤拷锟斤拷锟斤拷锟斤拷锟绞硷拷锟斤拷锟斤拷锟斤拷
+
+    Init_uart();
     ips114_init();
     mt9v03x_double_init(mt9v03x_1);
     buzzer_init();
@@ -53,8 +55,11 @@ int core0_main(void)
     Encoder_Data_Get_Init();
     motor_init();
     Pid_Init();
+    IMU_init();
     pit_ms_init(CCU60_CH0, 5);
+    pit_ms_init(CCU61_CH0,5);
     pit_ms_init(CCU60_CH1,10);
+    car_start=0;
     // 锟剿达拷锟斤拷写锟矫伙拷锟斤拷锟斤拷 锟斤拷锟斤拷锟斤拷锟斤拷锟绞硷拷锟斤拷锟斤拷锟斤拷
     cpu_wait_event_ready();         // 锟饺达拷锟斤拷锟叫猴拷锟侥筹拷始锟斤拷锟斤拷锟�?
     while (TRUE)
@@ -63,15 +68,16 @@ int core0_main(void)
         // 锟剿达拷锟斤拷写锟斤拷要循锟斤拷执锟叫的达拷锟斤拷
         if(mt9v03x_finish_flag_1==1)
         {
+            image_busy = 1;
+
             image_invocation();
+            image_busy = 0;
+            image_ready = 1;
             ips114_screen();
-            ips114_show_gray_image(0, 0, mt9v03x_image_1[0], MT9V03X_1_W, MT9V03X_1_H,MT9V03X_1_W/2 ,MT9V03X_1_H/2, threhold);
+            ips114_show_gray_image(0, 0, Image_Use[0], CROP_W, CROP_H,CROP_W*47/84 ,CROP_H*2/3,threhold );
             ips114_show_line();
             mt9v03x_finish_flag_1=0;
         }
-
-
-
         // 锟剿达拷锟斤拷写锟斤拷要循锟斤拷执锟叫的达拷锟斤拷
     }
 }

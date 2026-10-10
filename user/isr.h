@@ -40,9 +40,9 @@
 
 
 
+extern int car_start;
 
-
-
+extern volatile uint8 seekfree_wave_send_flag;
 
 
 

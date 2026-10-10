@@ -36,12 +36,13 @@
 #include "isr_config.h"
 #include "isr.h"
 #include "motor.h"
-
+#include "vofa.h"
+#include "justfloat.h"
 // 对于TC系列默认是不支持中断嵌套的，希望支持中断嵌套需要在中断内使用 interrupt_global_enable(0); 来开启中断嵌套
 // 简单点说实际上进入中断后TC系列的硬件自动调用了 interrupt_global_disable(); 来拒绝响应任何的中断，因此需要我们自己手动调用 interrupt_global_enable(0); 来开启中断的响应。
 
-
-
+volatile uint8 seekfree_wave_send_flag = 0;
+int car_start;
 // **************************** PIT中断函数 ****************************
 IFX_INTERRUPT(cc60_pit_ch0_isr, 0, CCU6_0_CH0_ISR_PRIORITY)
 {
@@ -51,7 +52,17 @@ IFX_INTERRUPT(cc60_pit_ch0_isr, 0, CCU6_0_CH0_ISR_PRIORITY)
     Encoder_Data_Get();
     Encoder_Data_distance();
     buzzer_tick();
-    circle_control();
+    car_start++;
+    if(car_start>=600)
+    {
+        circle_control();
+    }
+
+
+
+
+
+
 
 }
 
@@ -60,7 +71,12 @@ IFX_INTERRUPT(cc60_pit_ch1_isr, 0, CCU6_0_CH1_ISR_PRIORITY)
 {
     interrupt_global_enable(0);                     // 开启中断嵌套
     pit_clear_flag(CCU60_CH1);
-    line_control();
+
+    if(car_start>=600)
+       {
+            line_control();
+       }
+
 
 }
 
@@ -71,6 +87,11 @@ IFX_INTERRUPT(cc61_pit_ch0_isr, 0, CCU6_1_CH0_ISR_PRIORITY)
 
 
 
+    if(gyro_Offset_flag==1)
+        {
+            imu660rb_get_gyro();
+            IMU_YAW_integral();
+        }
 
 }
 
@@ -211,7 +232,7 @@ IFX_INTERRUPT(dma_ch7_isr, 0, DMA_INT_PRIO_2)
 IFX_INTERRUPT(uart0_tx_isr, 0, UART0_TX_INT_PRIO)
 {
     interrupt_global_enable(0);                     // 开启中断嵌套
-
+    uart_rx_interrupt_handler();
 
 
 }
@@ -252,10 +273,8 @@ IFX_INTERRUPT(uart2_tx_isr, 0, UART2_TX_INT_PRIO)
 IFX_INTERRUPT(uart2_rx_isr, 0, UART2_RX_INT_PRIO)
 {
     interrupt_global_enable(0);                     // 开启中断嵌套
-    wireless_module_uart_handler();                 // 无线模块统一回调函数
-
-
-
+    //wireless_module_uart_handler();                 // 无线模块统一回调函数
+    uart_rx_interrupt_handler();
 }
 // 串口3默认连接到GPS定位模块
 IFX_INTERRUPT(uart3_tx_isr, 0, UART3_TX_INT_PRIO)

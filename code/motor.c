@@ -38,6 +38,7 @@ void Encoder_Init()
  * 编码器数据获取
  * 函数名void Encoder_Data_Get(void)
 ***************************/
+
 void Encoder_Data_Get(void)
 {
     motor_L.encoder_raw=-encoder_get_count(TIM4_ENCODER);
@@ -49,14 +50,14 @@ void Encoder_Data_Get(void)
     motor_R.encoder_speed=motor_R.encoder_speed*0.5+motor_R.encoder_raw*0.5;
     motor_R.total_encoder+= motor_R.encoder_raw;//锟斤拷锟斤拷锟斤拷锟桔硷拷值
     encoder_clear_count(TIM6_ENCODER);
-
-    Encoder_Data_distance();
 }
 void Encoder_Data_distance()
 {
     distance_L=motor_L.total_encoder/5000.0f;
     distance_R=motor_R.total_encoder/5000.0f;
-    distance=(distance_L+distance_R)/2;
+    distance=(distance_L+distance_R)/2.0f;
+
+
 }
 /**********************
  * 编码器数据初始化
@@ -189,8 +190,8 @@ float Speed_pid_right(Increase_pid *pid_right,float encoder_speed_right)
     return pid_right->out;
 }
 /*****************************
- * 启动补偿
- * 函数名：static int Motor_Start_Compensate(float pid_out, float target, int encoder_speed, int min_pwm);
+ * 锟斤拷锟斤拷锟斤拷锟斤拷
+ * 锟斤拷锟斤拷锟斤拷static int Motor_Start_Compensate(float pid_out, float target, int encoder_speed, int min_pwm);
  *******************************/
 static int Motor_Start_Compensate(float pid_out, float target, int encoder_speed, int min_pwm)
 {
@@ -308,5 +309,3 @@ void circle_control()
     int pwm_R = Motor_Start_Compensate(out_R, pid_speed_R.target, motor_R.encoder_speed, 850);
     Motor_SetSpeed((int)out_L, pwm_R);
 }
-
-

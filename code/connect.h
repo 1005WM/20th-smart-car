@@ -20,8 +20,9 @@ typedef enum
 
 extern driver_state Go;
 
-
+//extern  diff;
 int what_control();
+extern int path_index;
 
 
 #endif /* CODE_CONNECT_H_ */

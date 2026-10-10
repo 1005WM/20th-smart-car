@@ -342,3 +342,11 @@ code/buzzer.o :	d:/workspace002/Seekfree_TC264_DualCam_Opensource_Library/code/c
 d:/workspace002/Seekfree_TC264_DualCam_Opensource_Library/code/connect.h :
 code/buzzer.o :	d:/workspace002/Seekfree_TC264_DualCam_Opensource_Library/code/buzzer.h
 d:/workspace002/Seekfree_TC264_DualCam_Opensource_Library/code/buzzer.h :
+code/buzzer.o :	d:/workspace002/Seekfree_TC264_DualCam_Opensource_Library/code/IMU.h
+d:/workspace002/Seekfree_TC264_DualCam_Opensource_Library/code/IMU.h :
+code/buzzer.o :	d:/workspace002/Seekfree_TC264_DualCam_Opensource_Library/user/isr.h
+d:/workspace002/Seekfree_TC264_DualCam_Opensource_Library/user/isr.h :
+code/buzzer.o :	d:/workspace002/Seekfree_TC264_DualCam_Opensource_Library/code/vofa.h
+d:/workspace002/Seekfree_TC264_DualCam_Opensource_Library/code/vofa.h :
+code/buzzer.o :	d:/workspace002/Seekfree_TC264_DualCam_Opensource_Library/code/justfloat.h
+d:/workspace002/Seekfree_TC264_DualCam_Opensource_Library/code/justfloat.h :

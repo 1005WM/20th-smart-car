@@ -11,22 +11,27 @@
 #include "zf_common_headfile.h"
 extern int threhold;
  extern float weighted_error;//偏锟斤拷
+#define CROP_H  90      // 裁剪后高度
+#define CROP_W  168  //宽度
 
-
-uint8 Otsu(uint8 imageindex[MT9V03X_1_H][MT9V03X_1_W]);
+uint8 Otsu(uint8 Image_Use[CROP_H][CROP_W]);
 void BinaryZation(uint8 value);
 void image_invocation();
 void ips114_screen();
 void ips114_show_line();
 float Deviation();
+void cut_image(void);
+extern uint8 Image_Use[CROP_H][CROP_W];
 
+extern volatile int road_order_cache;
+extern volatile float road_weighted_error_cache;
 
 typedef enum
 {
     ROAD_NORMAL       = 0,
-    ROAD_LEFT_BRANCH  = 3,   // 宸︿笁宀�
-    ROAD_RIGHT_BRANCH = 4,   // 鍙充笁宀�
-    ROAD_CROSS        = 8,   // 鍗佸瓧
-    ROAD_T            = 9,   // T瀛�
+    ROAD_LEFT_BRANCH  = 3,
+    ROAD_RIGHT_BRANCH = 4,
+    ROAD_CROSS        = 8,
+    ROAD_T            = 9,
 } road_type_t;
 #endif /* CODE_IMAGE_H_ */

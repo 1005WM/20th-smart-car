@@ -123,6 +123,10 @@
 #include "motor.h"
 #include "connect.h"
 #include "buzzer.h"
+#include "IMU.h"
+#include "isr.h"
+#include "vofa.h"
+#include "justfloat.h"
 //=====================================================”√ªß≤„======================================================
 
 #endif
