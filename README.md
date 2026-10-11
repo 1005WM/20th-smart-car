@@ -8,7 +8,7 @@
 - **调试**：IPS114 实时叠加图像/边界/中线/参数，VOFA+ 与逐飞助手波形，串口在线调 PID
 - **开发环境**：AURIX Development Studio **v1.10.2**（TASKING，`cctc -Ctc26xb`）
 
-> ⚠️ 当前工作区源码**不能直接编译通过**（语法错误 + 未定义符号），详见[已知问题](#已知问题)；`Debug/` 里的 `.hex`/`.elf` 是 2026-07-25 的旧产物。
+> ⚠️ 当前代码**还不能直接编译链接**（存在未定义符号），详见[已知问题](#已知问题)；`Debug/` 里的 `.hex`/`.elf` 是 2026-07-25 的旧产物。
 
 ## 目录结构
 
@@ -16,7 +16,7 @@
 ├── code/                 用户应用代码
 │   ├── image.c/.h        图像处理：Otsu 二值化、边界跟随、路口判断、屏幕叠加
 │   ├── motor.c/.h        电机、编码器、速度环 PID、位置 PD、控制调度
-│   ├── connect.c/.h      路口/路段状态机与路径表（半成品）
+│   ├── connect.c/.h      路口状态机与路径表（path_driver，尚未接入 motor.c）
 │   ├── IMU.c/.h          IMU660RB 初始化、零漂校准、偏航角积分
 │   ├── vofa.c/.h         调试串口、FIFO、上位机数据解析、逐飞助手
 │   ├── justfloat.c/.h    VOFA+ JustFloat 协议
@@ -99,12 +99,12 @@
 
 | 参数 | 当前值 | 位置 |
 | --- | --- | --- |
-| 基础速度 | 70 | `code/motor.c` `line_control()` |
-| 位置 PD | `Kp=1.0`、`Kd=1.0`、限幅 30 | `PositionPid_Init()` |
+| 基础速度 | 循迹 70（`motor.c`）；转向 300（`connect.c` `BASE_SPEED`） | `line_control()` / `path_driver()` |
+| 位置 PD | 初始 `Kp=1.0`、`Kd=1.0`、限幅 30；`path_driver()` 内改为 `1.1 / 1.2`、限幅 50 | `PositionPid_Init()` / `code/connect.c` |
 | 速度环 PID | 左 `5.0 / 0.05 / 0`（±1200）、右 `6.0 / 0.008 / 0`（±1500） | `Pid_Init()` |
 | PWM | 17 kHz，上限 2000，起步补偿 左 800 / 右 850 | `code/motor.c` |
 | 方向偏差死区 | ±2.0 | `line_control()` |
-| 转向差速 / 退出 | 左 ×0.7、右 ×1.0；偏差回到 ±6 或超时 110 拍退出 | `code/connect.c` |
+| 转向差速 / 退出 | 左转按路口序号取 ×1.9 / 2.5 / 2.4 / 2.1，右转 ×2.25 / 2.42；`turn_tick ≥ 12` 且陀螺仪转角变化 ≥85° 退出，随后 cooldown 4 拍 | `code/connect.c` |
 | 里程换算 | `total_encoder / 5000` | `Encoder_Data_distance()` |
 | 测速低通 | `0.5 × 旧值 + 0.5 × 新值` | `Encoder_Data_Get()` |
 | 图像 | 188 × 120；Otsu 阈值搜索 5~244；搜线窗口 ±10 | `code/image.c` |
@@ -127,7 +127,11 @@
 
 ## 已知问题
 
-1. **当前源码编译不过**：`code/IMU.c:43` 函数定义后多一个 `/`；`code/connect.c` 类型名写成 `Driver_state`（应为 `driver_state`）、`case` 标签不在 `switch` 内、存在空 `if()` 与重复的 `turn_tick` 定义、第 25 行有孤立 `*/`；`Image_Use`、`cut_image()`、`image_busy`、`image_ready`、`base_speed`、`road_order_cache`、`path_index`、`what_control()` 等符号只声明未定义。
+1. **还不能编译链接**，当前阻塞点：
+   - `code/IMU.c:43`：函数定义后多一个 `/`，语法错误（尚未修）。
+   - `code/connect.c` 的语法问题已修复（`driver_state` 类型名、`switch` 内的 `case`、单一 `turn_tick`、无孤立注释符）；但 `code/motor.c:272` 仍在调用 `state_machine()`，而 `connect.c` 现在只提供 `path_driver()`，需要改调用点或补一个 `state_machine()` 包装。
+   - `road_order_cache`、`road_weighted_error_cache`（`code/image.h:26-27` 声明）被 `connect.c:114/130/137` 使用，但全工程没有定义，需要补上赋值逻辑，否则路口匹配永远不成立。
+   - `Image_Use`、`cut_image()`、`image_busy`、`image_ready` 只声明未定义，被 `user/cpu0_main.c` 使用。
 2. `circle_control()` 中 `pwm_L` 算出后未使用，`Motor_SetSpeed((int)out_L, pwm_R)` 左轮传的是**未限幅的 PID 原始输出**，左右不对称。
 3. `code/buzzer.h` 注释写 ticks 以 10 ms 为单位，但 `buzzer_tick()` 实际在 **5 ms** 的 PIT 中调用，响铃时间是注释值的一半。
 4. `code/IMU.c` 陀螺仪灵敏度写死 `14.3f`，而同处注释标注 IMU660 应为 16.4（本工程用的正是 IMU660RB）；且积分出的角度只被计算、未接入转向补偿。
